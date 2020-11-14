@@ -13,5 +13,5 @@ Refer to `scraping/usage.md` for further instructions on how to run the scraping
   ### Fine-tuning
   - [AraBert](https://github.com/aub-mind/arabert)
   - [ArabicBert](https://github.com/alisafaya/Arabic-BERT)
-  - [ALBer](https://twitter.com/kuisailab/status/1297570526320308224?s=21)
+  - [ALBert](https://twitter.com/kuisailab/status/1297570526320308224?s=21)
   - [Gpt-2-small-arabic](https://huggingface.co/akhooli/gpt2-small-arabic)

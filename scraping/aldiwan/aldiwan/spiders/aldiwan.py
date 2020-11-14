@@ -8,7 +8,7 @@ class AldiwanSpider(scrapy.Spider):
     start_urls = ['http://www.aldiwan.net/']
 
     def start_requests(self):
-        for poem_id in range(725, 71232):
+        for poem_id in range(24, 71232):
             reqeust = scrapy.Request(url="https://www.aldiwan.net/poem" + str(poem_id) + ".html",
                                      callback=self.parse)
             reqeust.meta['poem_id'] = poem_id

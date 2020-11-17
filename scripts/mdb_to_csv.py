@@ -1,9 +1,9 @@
 """
 Convert MDB files to CSV files
 """
+import argparse
 import os
 import subprocess
-import argparse
 from glob import glob
 
 from tqdm import tqdm
@@ -27,7 +27,7 @@ def convert_mdb_to_csv(input_path, output_path):
 			os.system("MDB_JET3_CHARSET='cp1256' mdb-export {} {} > {}".format(book, table, table_path))
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Convert MDB to CSV')
 	parser.add_argument(
 		"-i",

@@ -1,6 +1,6 @@
 ## Requirements
 * [tqdm 4.52.0](https://pypi.org/project/tqdm/)
-
+* [mdbtools](https://github.com/mdbtools/mdbtools)
 
 ### Quickstart	
 To run a MDB to CSV convertor call the `mdb_to_csv.py` script with at least one of the following arguments:

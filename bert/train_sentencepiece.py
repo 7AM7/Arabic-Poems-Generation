@@ -3,7 +3,6 @@ import logging
 import argparse
 
 import sentencepiece as spm
-import tensorflow as tf
 
 logging.basicConfig(
     format="%(asctime)s : %(levelname)s : %(message)s",
@@ -138,7 +137,7 @@ def main():
     args = parser.parse_args()
 
     TrainSentencePiece(
-        input_file=tf.gfile.Glob(args.input_file),
+        input_file=args.input_file,
         save_dir=args.save_folder,
         model_prefix=args.model_prefix,
         vocab_size=args.vocab_size,

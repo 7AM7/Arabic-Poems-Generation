@@ -137,8 +137,8 @@ def main():
     args = parser.parse_args()
 
     TrainSentencePiece(
-        input_file=args.input_path,
-        save_dir=args.output_path,
+        input_file=args.input_file,
+        save_dir=args.save_folder,
         model_prefix=args.model_prefix,
         vocab_size=args.vocab_size,
         model_type=args.model_type,

@@ -4,6 +4,12 @@ import argparse
 
 import sentencepiece as spm
 
+logging.basicConfig(
+    format="%(asctime)s : %(levelname)s : %(message)s",
+    level=logging.INFO,
+    filename="log/ar_training_run_1.log",
+)
+
 
 class TrainSentencePiece:
     def __init__(
@@ -64,7 +70,6 @@ class TrainSentencePiece:
             )
 
             logging.info("SentencePiece model/vocab Trained Successfully.")
-
 
 def main():
     parser = argparse.ArgumentParser(description='Train Sentencepiece Model')
@@ -129,21 +134,7 @@ def main():
         type=lambda s: [str(item) for item in s.split(',')]
     )
 
-    parser.add_argument(
-        "-l",
-        "--log_dir",
-        help="logging file dir",
-        required=True,
-        type=str
-    )
-
     args = parser.parse_args()
-
-    logging.basicConfig(
-        format="%(asctime)s : %(levelname)s : %(message)s",
-        level=logging.INFO,
-        filename=os.path.join(args.log_dir, "ar_training_run_1.log"),
-    )
 
     TrainSentencePiece(
         input_file=args.input_path,

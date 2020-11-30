@@ -14,7 +14,7 @@ class TrainSentencePiece:
         vocab_size=64000,
         model_type="unigram",
         max_num_sentences=12800000,
-        special_tokens=["[PAD]","[UNK]","[CLS]","[SEP]","[MASK]"],
+        special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
     ):
         """
         Initialize TrainSentencePiece Model.

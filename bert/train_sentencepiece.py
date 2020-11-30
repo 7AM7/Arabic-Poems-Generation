@@ -64,7 +64,7 @@ class TrainSentencePiece:
                 control_symbols=self.special_tokens,
                 # amount of characters covered by the model.
                 character_coverage=1.0,
-                vocab_size=self.combined_vocab_size,
+                vocab_size=self.vocab_size,
                 model_type=self.model_type,
                 shuffle_input_sentence=True,
             )

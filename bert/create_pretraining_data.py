@@ -18,8 +18,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import collections
 import random
+
 import tokenization
 import tensorflow as tf
 
@@ -28,11 +30,11 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "input_file", None, "Input raw text file (or comma-separated list of files)."
+    "input_dir", None, "Input directory that contains text files"
 )
 
 flags.DEFINE_string(
-    "output_file", None, "Output TF example file (or comma-separated list of files)."
+    "output_dir", None, "Output TF records directory"
 )
 
 flags.DEFINE_string(
@@ -488,6 +490,9 @@ def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens, rng):
 
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.basicConfig(filename='log/tensorflow.log',
+                            level=tf.logging.INFO,
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file,
@@ -495,42 +500,61 @@ def main(_):
         piece_model=FLAGS.piece_model_file,
     )
 
+    # all files
     input_files = []
-    for input_pattern in FLAGS.input_file.split(","):
-        input_files.extend(tf.gfile.Glob(input_pattern))
+    for input_pattern in tf.gfile.Glob(FLAGS.input_dir):
+        input_files.append(input_pattern)
 
-    tf.logging.info("*** Reading from input files ***")
-    for input_file in input_files:
-        tf.logging.info("  %s", input_file)
+    n = 500
+    i = 0
+    check = False
+    while True:
+        if check:
+            break
+        if n >= len(input_files):
+            n = len(input_files)
+            check = True
 
-    rng = random.Random(FLAGS.random_seed)
-    instances = create_training_instances(
-        input_files,
-        tokenizer,
-        FLAGS.max_seq_length,
-        FLAGS.dupe_factor,
-        FLAGS.short_seq_prob,
-        FLAGS.masked_lm_prob,
-        FLAGS.max_predictions_per_seq,
-        rng,
-    )
+        sub_files = input_files[i: n]
 
-    output_files = FLAGS.output_file.split(",")
-    tf.logging.info("*** Writing to output files ***")
-    for output_file in output_files:
-        tf.logging.info("  %s", output_file)
+        tf.logging.info("*** Reading from sub files from {} to {} ***".format(i, n))
+        output_names = []
+        for input_file in sub_files:
+            tf.logging.info("  %s", input_file)
+            filename = input_file.split('/')[-1].split('.')[0] + '.tfrecord'
+            output_path = os.path.join(FLAGS.output_dir, filename)
+            output_names.append(output_path)
 
-    write_instance_to_example_files(
-        instances,
-        tokenizer,
-        FLAGS.max_seq_length,
-        FLAGS.max_predictions_per_seq,
-        output_files,
-    )
+        rng = random.Random(FLAGS.random_seed)
+        instances = create_training_instances(
+            sub_files,
+            tokenizer,
+            FLAGS.max_seq_length,
+            FLAGS.dupe_factor,
+            FLAGS.short_seq_prob,
+            FLAGS.masked_lm_prob,
+            FLAGS.max_predictions_per_seq,
+            rng,
+        )
+
+        tf.logging.info("*** Writing to output files from {} to {} ***".format(i, n))
+        for output_file in output_names:
+            tf.logging.info("  %s", output_file)
+
+        write_instance_to_example_files(
+            instances,
+            tokenizer,
+            FLAGS.max_seq_length,
+            FLAGS.max_predictions_per_seq,
+            output_names,
+        )
+
+        i += 500
+        n += 500
 
 
 if __name__ == "__main__":
-    flags.mark_flag_as_required("input_file")
-    flags.mark_flag_as_required("output_file")
+    flags.mark_flag_as_required("input_dir")
+    flags.mark_flag_as_required("output_dir")
     flags.mark_flag_as_required("vocab_file")
     tf.app.run()

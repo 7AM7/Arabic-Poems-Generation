@@ -198,13 +198,13 @@ class FullTokenizer(object):
 
     def convert_tokens_to_ids(self, tokens):
         if self.piece == "sentence":
-            return self.sentencepiece_tokenizer.tokens_to_ids(token=tokens)
+            return self.sentencepiece_tokenizer.tokens_to_ids(tokens=tokens)
         else:
             return convert_by_vocab(self.vocab, tokens)
 
     def convert_ids_to_tokens(self, ids):
         if self.piece == "sentence":
-            return self.sentencepiece_tokenizer.ids_to_tokens(id=ids)
+            return self.sentencepiece_tokenizer.ids_to_tokens(ids=ids)
         else:
             return convert_by_vocab(self.inv_vocab, ids)
 

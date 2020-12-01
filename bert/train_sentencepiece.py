@@ -20,7 +20,7 @@ class TrainSentencePiece:
         vocab_size=64000,
         model_type="unigram",
         max_num_sentences=12800000,
-        special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
+        control_symbols=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
     ):
         """
         Initialize TrainSentencePiece Model.
@@ -30,6 +30,7 @@ class TrainSentencePiece:
         :param vocab_size: (int) of vocab size
         :param model_type: (str) of sentencepiece model type (e.g.: BPE, unigram)
         :param max_num_sentences: (int) of maximum size of sentences the trainer loads from dataset.
+        :param control_symbols: (list of str) of sentencepiece control symbols (e.g.: [<pad>,<mask>])
         """
         self.input_file = input_file
         self.model_prefix = model_prefix
@@ -37,7 +38,7 @@ class TrainSentencePiece:
         self.vocab_size = vocab_size
         self.model_type = model_type
         self.max_num_sentences = max_num_sentences
-        self.special_tokens = special_tokens
+        self.control_symbols = control_symbols
 
         self.train_model()
 
@@ -48,9 +49,9 @@ class TrainSentencePiece:
             raise ValueError("Could not find save dir : {}".format(self.save_dir))
 
         logging.info("Training SentencePiece model/vocab ...")
-        combined_model_file = os.path.join(self.save_dir, self.model_prefix)
+        model_file = os.path.join(self.save_dir, self.model_prefix)
         # Check if a cached combined model file exists.
-        if os.path.exists(combined_model_file + ".model"):
+        if os.path.exists(model_file + ".model"):
             logging.info("Found existing SentencePiece model/vocab ...")
         else:
             logging.info(
@@ -60,8 +61,8 @@ class TrainSentencePiece:
             spm.SentencePieceTrainer.train(
                 input=self.input_file,
                 input_sentence_size=self.max_num_sentences,
-                model_prefix=combined_model_file,
-                control_symbols=self.special_tokens,
+                model_prefix=model_file,
+                control_symbols=self.control_symbols,
                 # amount of characters covered by the model.
                 character_coverage=1.0,
                 vocab_size=self.vocab_size,
@@ -126,9 +127,9 @@ def main():
     )
 
     parser.add_argument(
-        "-k",
-        "--special_tokens",
-        help="sentencepiece model special tokens (e.g.: [<pad>,<s>])",
+        "-c",
+        "--control_symbols",
+        help="sentencepiece model control symbols(e.g.: [<pad>,<mask>])",
         required=False,
         default=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
         type=lambda s: [str(item) for item in s.split(',')]
@@ -143,7 +144,7 @@ def main():
         vocab_size=args.vocab_size,
         model_type=args.model_type,
         max_num_sentences=args.max_num_sentences,
-        special_tokens=args.special_tokens
+        control_symbols=args.control_symbols
     )
 
 

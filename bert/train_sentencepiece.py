@@ -20,7 +20,7 @@ class TrainSentencePiece:
         model_prefix='tokenizer',
         vocab_size=64000,
         model_type="bpe",
-        max_num_sentences=12800000,
+        max_num_sentences=1000000,
     ):
         """
         Initialize TrainSentencePiece Model.

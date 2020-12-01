@@ -66,6 +66,8 @@ flags.DEFINE_integer(
 
 flags.DEFINE_integer("random_seed", 12345, "Random seed for data generation.")
 
+flags.DEFINE_integer("split_num", 10, "Size of chunk")
+
 flags.DEFINE_integer(
     "dupe_factor",
     10,
@@ -502,7 +504,7 @@ def main(_):
     for input_pattern in tf.gfile.Glob(FLAGS.input_dir):
         input_files.append(input_pattern)
 
-    n = 500
+    n = FLAGS.split_num
     i = 0
     check = False
     while True:
@@ -512,19 +514,20 @@ def main(_):
             n = len(input_files)
             check = True
 
-        sub_files = input_files[i: n]
+        # Split files
+        sub_input_files = input_files[i: n]
 
         tf.logging.info("*** Reading from sub files from {} to {} ***".format(i, n))
-        output_names = []
-        for input_file in sub_files:
+        sub_output_file = []
+        for input_file in sub_input_files:
             tf.logging.info("  %s", input_file)
             filename = input_file.split('/')[-1].split('.')[0] + '.tfrecord'
             output_path = os.path.join(FLAGS.output_dir, filename)
-            output_names.append(output_path)
+            sub_output_file.append(output_path)
 
         rng = random.Random(FLAGS.random_seed)
         instances = create_training_instances(
-            sub_files,
+            sub_input_files,
             tokenizer,
             FLAGS.max_seq_length,
             FLAGS.dupe_factor,
@@ -535,7 +538,7 @@ def main(_):
         )
 
         tf.logging.info("*** Writing to output files from {} to {} ***".format(i, n))
-        for output_file in output_names:
+        for output_file in sub_output_file:
             tf.logging.info("  %s", output_file)
 
         write_instance_to_example_files(
@@ -543,11 +546,11 @@ def main(_):
             tokenizer,
             FLAGS.max_seq_length,
             FLAGS.max_predictions_per_seq,
-            output_names,
+            sub_output_file,
         )
 
-        i += 500
-        n += 500
+        i += FLAGS.split_num
+        n += FLAGS.split_num
 
 
 if __name__ == "__main__":

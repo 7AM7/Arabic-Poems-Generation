@@ -7,7 +7,7 @@ import sentencepiece as spm
 logging.basicConfig(
     format="%(asctime)s : %(levelname)s : %(message)s",
     level=logging.INFO,
-    filename="log/ar_training_run_1.log",
+    filename="log/sentencepiec_run.log",
 )
 
 

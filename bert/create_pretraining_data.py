@@ -490,9 +490,6 @@ def truncate_seq_pair(tokens_a, tokens_b, max_num_tokens, rng):
 
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
-    tf.logging.basicConfig(filename='log/tensorflow.log',
-                            level=tf.logging.INFO,
-                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file,

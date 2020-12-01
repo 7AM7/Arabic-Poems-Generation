@@ -17,7 +17,7 @@ class TrainSentencePiece:
         input_file,
         save_dir,
         control_symbols,
-        model_prefix='tokenizer',
+        model_prefix="tokenizer",
         vocab_size=64000,
         model_type="bpe",
         max_num_sentences=1000000,
@@ -74,13 +74,9 @@ class TrainSentencePiece:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train Sentencepiece Model')
+    parser = argparse.ArgumentParser(description="Train Sentencepiece Model")
     parser.add_argument(
-        "-i",
-        "--input_file",
-        help="input data file path",
-        required=True,
-        type=str
+        "-i", "--input_file", help="input data file path", required=True, type=str
     )
 
     parser.add_argument(
@@ -88,7 +84,7 @@ def main():
         "--save_folder",
         help="Path to save the model files",
         required=True,
-        type=str
+        type=str,
     )
 
     parser.add_argument(
@@ -97,16 +93,11 @@ def main():
         help="model prefix or model names",
         required=False,
         default="tokenizer",
-        type=str
+        type=str,
     )
 
     parser.add_argument(
-        "-v",
-        "--vocab_size",
-        help="vocab size",
-        required=False,
-        default=64000,
-        type=int
+        "-v", "--vocab_size", help="vocab size", required=False, default=64000, type=int
     )
 
     parser.add_argument(
@@ -115,7 +106,7 @@ def main():
         help="sentencepiece model type (e.g.: BPE, unigram)",
         required=False,
         default="bpe",
-        type=str
+        type=str,
     )
 
     parser.add_argument(
@@ -124,7 +115,7 @@ def main():
         help="the maximum size of sentences the trainer loads from dataset",
         required=False,
         default=12800000,
-        type=int
+        type=int,
     )
 
     parser.add_argument(
@@ -133,7 +124,7 @@ def main():
         help="sentencepiece model control symbols(e.g.: [<pad>,<mask>])",
         required=False,
         default="[PAD], [UNK], [CLS], [SEP], [MASK]",
-        type=lambda s: [str(item) for item in s.split(',')]
+        type=lambda s: [str(item) for item in s.split(",")],
     )
 
     args = parser.parse_args()
@@ -145,7 +136,7 @@ def main():
         model_prefix=args.model_prefix,
         vocab_size=args.vocab_size,
         model_type=args.model_type,
-        max_num_sentences=args.max_num_sentences
+        max_num_sentences=args.max_num_sentences,
     )
 
 

@@ -39,9 +39,7 @@ flags.DEFINE_string(
     "vocab_file", None, "The vocabulary file that the BERT model was trained on."
 )
 
-flags.DEFINE_string(
-    "piece_model_file", None, "The sentecepiece mode path"
-)
+flags.DEFINE_string("piece_model_file", None, "The sentecepiece mode path")
 
 flags.DEFINE_bool(
     "do_lower_case",
@@ -494,7 +492,7 @@ def main(_):
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file,
         do_lower_case=FLAGS.do_lower_case,
-        piece_model=FLAGS.piece_model_file
+        piece_model=FLAGS.piece_model_file,
     )
 
     input_files = []

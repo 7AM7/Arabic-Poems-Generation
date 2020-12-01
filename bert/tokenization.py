@@ -126,6 +126,8 @@ def load_vocab(vocab_file):
   with tf.gfile.GFile(vocab_file, "r") as reader:
     while True:
       token = convert_to_unicode(reader.readline())
+      if token.split():
+        token = token.split()[0]
       if not token:
         break
       token = token.strip()
@@ -167,15 +169,19 @@ def whitespace_tokenize(text):
 class FullTokenizer(object):
   """Runs end-to-end tokenziation."""
 
-  def __init__(self, vocab_file, do_lower_case=True,
-               piece='sentence', piece_model=None):
-    self.vocab = load_vocab(vocab_file)
-    self.inv_vocab = {v: k for k, v in self.vocab.items()}
-    self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
+  def __init__(self,
+               vocab_file,
+               do_lower_case=True,
+               piece='sentence',
+               piece_model=None
+  ):
     self.piece = piece
     if self.piece == 'sentence':
       self.sentencepiece_tokenizer = SentencePieceTokenizer(model=piece_model)
-    else: # Default to WordPiece
+    else:
+      self.vocab = load_vocab(vocab_file)
+      self.inv_vocab = {v: k for k, v in self.vocab.items()}
+      self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
       self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
   def tokenize(self, text):
@@ -189,10 +195,16 @@ class FullTokenizer(object):
     return split_tokens
 
   def convert_tokens_to_ids(self, tokens):
-    return convert_by_vocab(self.vocab, tokens)
+    if self.piece == "sentence":
+      return self.sentencepiece_tokenizer.tokens_to_ids(token=tokens)
+    else:
+      return convert_by_vocab(self.vocab, tokens)
 
   def convert_ids_to_tokens(self, ids):
-    return convert_by_vocab(self.inv_vocab, ids)
+    if self.piece == "sentence":
+      return self.sentencepiece_tokenizer.ids_to_tokens(id=ids)
+    else:
+      return convert_by_vocab(self.inv_vocab, ids)
 
 
 class BasicTokenizer(object):
@@ -319,11 +331,11 @@ class SentencePieceTokenizer(object):
   def tokenize(self, text):
     return self.sp.EncodeAsPieces(text)
 
-  def id_to_token(self, id):
-      return self.sp.id_to_piece(int(id))
+  def ids_to_tokens(self, ids):
+      return [self.sp.IdToPiece(int(id)) for id in ids]
 
-  def token_to_id(self, token):
-      return self.sp.piece_to_id(token)
+  def tokens_to_ids(self, tokens):
+      return [self.sp.PieceToId(token) for token in tokens]
 
 
 class WordpieceTokenizer(object):

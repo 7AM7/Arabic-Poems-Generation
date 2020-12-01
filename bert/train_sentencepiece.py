@@ -16,11 +16,11 @@ class TrainSentencePiece:
         self,
         input_file,
         save_dir,
+        control_symbols,
         model_prefix='tokenizer',
         vocab_size=64000,
         model_type="unigram",
         max_num_sentences=12800000,
-        control_symbols=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
     ):
         """
         Initialize TrainSentencePiece Model.
@@ -58,7 +58,7 @@ class TrainSentencePiece:
                 "Could not find existing SentencePiece model/vocab. Training ..."
             )
 
-            spm.SentencePieceTrainer.train(
+            spm.SentencePieceTrainer.Train(
                 input=self.input_file,
                 input_sentence_size=self.max_num_sentences,
                 model_prefix=model_file,
@@ -71,6 +71,7 @@ class TrainSentencePiece:
             )
 
             logging.info("SentencePiece model/vocab Trained Successfully.")
+
 
 def main():
     parser = argparse.ArgumentParser(description='Train Sentencepiece Model')
@@ -131,7 +132,7 @@ def main():
         "--control_symbols",
         help="sentencepiece model control symbols(e.g.: [<pad>,<mask>])",
         required=False,
-        default=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
+        default="[PAD], [UNK], [CLS], [SEP], [MASK]",
         type=lambda s: [str(item) for item in s.split(',')]
     )
 
@@ -140,11 +141,11 @@ def main():
     TrainSentencePiece(
         input_file=args.input_file,
         save_dir=args.save_folder,
+        control_symbols=args.control_symbols,
         model_prefix=args.model_prefix,
         vocab_size=args.vocab_size,
         model_type=args.model_type,
-        max_num_sentences=args.max_num_sentences,
-        control_symbols=args.control_symbols
+        max_num_sentences=args.max_num_sentences
     )
 
 

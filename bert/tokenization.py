@@ -181,7 +181,6 @@ class FullTokenizer(object):
   def tokenize(self, text):
     split_tokens = []
     if self.piece == 'sentence':
-      text = ' '.join(whitespace_tokenize(text))
       split_tokens = self.sentencepiece_tokenizer.tokenize(text)
     else:
       for token in self.basic_tokenizer.tokenize(text):
@@ -319,6 +318,12 @@ class SentencePieceTokenizer(object):
 
   def tokenize(self, text):
     return self.sp.EncodeAsPieces(text)
+
+  def id_to_token(self, id):
+      return self.sp.id_to_piece(int(id))
+
+  def token_to_id(self, token):
+      return self.sp.piece_to_id(token)
 
 
 class WordpieceTokenizer(object):

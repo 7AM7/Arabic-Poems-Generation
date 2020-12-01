@@ -19,7 +19,7 @@ class TrainSentencePiece:
         control_symbols,
         model_prefix='tokenizer',
         vocab_size=64000,
-        model_type="unigram",
+        model_type="bpe",
         max_num_sentences=12800000,
     ):
         """
@@ -114,7 +114,7 @@ def main():
         "--model_type",
         help="sentencepiece model type (e.g.: BPE, unigram)",
         required=False,
-        default="unigram",
+        default="bpe",
         type=str
     )
 

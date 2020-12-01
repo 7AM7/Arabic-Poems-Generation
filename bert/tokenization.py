@@ -179,6 +179,7 @@ class FullTokenizer(object):
         self.piece = piece
         if self.piece == "sentence":
             self.sentencepiece_tokenizer = SentencePieceTokenizer(model=piece_model)
+            self.word2id, self.id2word = self.sentencepiece_tokenizer.create_word2id_id2word()
         else:
             self.vocab = load_vocab(vocab_file)
             self.inv_vocab = {v: k for k, v in self.vocab.items()}
@@ -340,6 +341,15 @@ class SentencePieceTokenizer(object):
 
     def tokens_to_ids(self, tokens):
         return [self.sp.PieceToId(token) for token in tokens]
+
+    def create_word2id_id2word(self):
+        word2id = {
+            self.sp.id_to_piece(id): id
+            for id in range(self.sp.get_piece_size())
+        }
+        id2word = dict(zip(word2id.values(), word2id.keys()))
+
+        return word2id, id2word
 
 
 class WordpieceTokenizer(object):

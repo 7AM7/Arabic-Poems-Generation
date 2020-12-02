@@ -30,7 +30,7 @@ class SentencePieceTokenizer:
             self.sp.id_to_piece(id): id
             for id in range(self.sp.get_piece_size())
         }
-        id2word = dict(zip(self.word2id.values(), self.word2id.keys()))
+        id2word = dict(zip(word2id.values(), word2id.keys()))
 
         return word2id, id2word
 
@@ -40,7 +40,7 @@ class SentencePieceTokenizer:
         return self.sp.EncodeAsPieces(text)
 
     def ids_to_tokens(self, ids):
-        return [self.sp.IdToPiece(int(id)) for id in ids]
+        return [self.word2id[int(id)] for id in ids]
 
     def tokens_to_ids(self, tokens):
-        return [self.sp.PieceToId(token) for token in tokens]
+        return [self.word2id[token] for token in tokens]

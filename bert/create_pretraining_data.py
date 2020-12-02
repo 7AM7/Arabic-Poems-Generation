@@ -600,5 +600,5 @@ if __name__ == "__main__":
     )
     flags.mark_flag_as_required("input_file")
     flags.mark_flag_as_required("output_dir")
-    flags.mark_flag_as_required("piece_model")
+    flags.mark_flag_as_required("sentencepiece_file")
     tf.app.run()

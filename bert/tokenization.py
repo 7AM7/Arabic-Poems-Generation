@@ -40,7 +40,7 @@ class SentencePieceTokenizer:
         return self.sp.EncodeAsPieces(text)
 
     def ids_to_tokens(self, ids):
-        return [self.word2id[int(id)] for id in ids]
+        return [self.id2word[int(id)] for id in ids]
 
     def tokens_to_ids(self, tokens):
         return [self.word2id[token] for token in tokens]

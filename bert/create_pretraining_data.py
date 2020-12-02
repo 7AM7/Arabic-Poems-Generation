@@ -90,7 +90,7 @@ def create_float_feature(values):
 
 def transform(instance, tokenizer, max_seq_length, max_predictions_per_seq):
     """Transform instance to inputs for MLM and NSP."""
-    input_ids = tokenizer.convert_tokens_to_ids(instance.tokens)
+    input_ids = tokenizer.tokens_to_ids(instance.tokens)
     assert len(input_ids) <= max_seq_length
     input_mask = [1] * len(input_ids)
     segment_ids = list(instance.segment_ids)

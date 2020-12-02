@@ -92,7 +92,7 @@ def main():
   model , tokenizer , loss = train_evaluate(model,tokenizer,dataset_train,dataset_test,batch_size,lr,adam_epsilon,epochs)
 
   #save model
-  bert_utils.Save_model_after_training(args.output_dir)
+  bert_utils.Save_model_after_training(model,tokenizer,args.output_dir)
 =======
   tokenizer=bert_utils.Load_tokenizer(model_name)
   model=bert_utils.Load_model(model_name)

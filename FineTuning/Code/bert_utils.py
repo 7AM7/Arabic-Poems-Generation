@@ -258,7 +258,7 @@ def train_evaluate(model , tokenizer , train_dataset , eval_dataset , batch_size
     return model_train , tokenizer_train , result
 
 
-def save_model_after_training(output_dir):
+def save_model_after_training(model,tokenizer,output_dir):
   # Create output directory if needed
   if not os.path.exists(output_dir):
       os.makedirs(output_dir)

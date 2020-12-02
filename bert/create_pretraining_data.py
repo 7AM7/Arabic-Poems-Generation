@@ -42,7 +42,7 @@ class TrainingInstance(object):
     def __str__(self):
         s = ""
         s += "tokens: %s\n" % (
-            " ".join([print(x) for x in self.tokens])
+            " ".join([str(x) for x in self.tokens])
         )
         s += "segment_ids: %s\n" % (" ".join([str(x) for x in self.segment_ids]))
         s += "is_random_next: %s\n" % self.is_random_next
@@ -50,7 +50,7 @@ class TrainingInstance(object):
             " ".join([str(x) for x in self.masked_lm_positions])
         )
         s += "masked_lm_labels: %s\n" % (
-            " ".join([print(x) for x in self.masked_lm_labels])
+            " ".join([str(x) for x in self.masked_lm_labels])
         )
         s += "\n"
         return s
@@ -63,7 +63,7 @@ def print_example(instance, features):
     tf.logging.info("*** Example ***")
     tf.logging.info(
         "tokens: %s"
-        % " ".join([print(x) for x in instance.tokens])
+        % " ".join([str(x) for x in instance.tokens])
     )
 
     for feature_name in features.keys():

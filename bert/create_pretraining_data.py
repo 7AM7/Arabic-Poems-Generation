@@ -164,8 +164,10 @@ def write_to_files(features, output_file):
     total_written = len(features)
     writer = tf.python_io.TFRecordWriter(output_file)
     writer.write(features.SerializeToString())
+    writer.close()
 
     tf.logging.info('Wrote %d total instances', total_written)
+
 
 def create_training_instances(x):
     """Create `TrainingInstance`s from raw text."""

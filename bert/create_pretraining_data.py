@@ -392,7 +392,7 @@ def create_masked_lm_predictions(
         # Whole Word Masking means that if we mask all of the wordpieces
         # corresponding to an original word. When a word has been split into
         # WordPieces, the first token does not have any marker and any subsequence
-        # tokens are prefixed with ##. So whenever we see the ## token, we
+        # tokens are prefixed with '_'. So whenever we see the ## token, we
         # append it to the previous set of word indexes.
         #
         # Note that Whole Word Masking does *not* change the training code
@@ -401,7 +401,7 @@ def create_masked_lm_predictions(
         if (
             whole_word_mask
             and len(cand_indexes) >= 1
-            and token.startswith("##")
+            and token.startswith("_")
         ):
             cand_indexes[-1].append(i)
         else:

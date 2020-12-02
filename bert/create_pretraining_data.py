@@ -487,7 +487,7 @@ def main(_):
     # create output dir
     output_dir = os.path.expanduser(FLAGS.output_dir)
     if not os.path.exists(output_dir):
-        os.mkdirs(output_dir)
+        os.makedirs(output_dir)
 
     tokenizer = SentencePieceTokenizer(
         model_file=FLAGS.sentencepiece_file,

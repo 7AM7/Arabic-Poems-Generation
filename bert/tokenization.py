@@ -23,15 +23,16 @@ class SentencePieceTokenizer:
         self.sp = spm.SentencePieceProcessor()
         self.lowercase = lowercase
         self.sp.Load(model_file)
-
-        self.create_word2id_id2word()
+        self.word2id, self.word2id = self.create_word2id_id2word()
 
     def create_word2id_id2word(self):
-        self.word2id = {
+        word2id = {
             self.sp.id_to_piece(id): id
             for id in range(self.sp.get_piece_size())
         }
-        self.id2word = dict(zip(self.word2id.values(), self.word2id.keys()))
+        id2word = dict(zip(self.word2id.values(), self.word2id.keys()))
+
+        return word2id, id2word
 
     def tokenize(self, text):
         if self.lowercase:
@@ -43,9 +44,3 @@ class SentencePieceTokenizer:
 
     def tokens_to_ids(self, tokens):
         return [self.sp.PieceToId(token) for token in tokens]
-
-    def get_word2id(self):
-        return self.word2id
-
-    def get_id2word(self):
-        return self.id2word

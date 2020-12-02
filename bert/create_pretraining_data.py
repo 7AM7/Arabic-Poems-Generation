@@ -218,7 +218,7 @@ def create_training_instances(x):
     all_documents = [x for x in all_documents if x]
 
     # generate training instances
-    vocab_words = list(tokenizer.get_word2id().keys())
+    vocab_words = list(tokenizer.word2id.keys())
     instances = []
     if worker_pool:
         process_args = []

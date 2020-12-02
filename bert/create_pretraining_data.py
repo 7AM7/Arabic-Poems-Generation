@@ -186,7 +186,7 @@ def create_training_instances(x):
 
     all_documents = [[]]
     for input_file in input_files:
-        with tf.gfile.GFile(input_file, "r") as reader:
+        with tf.io.gfile.GFile(input_file, "r") as reader:
             lines = reader.readlines()
             num_lines = len(lines)
             num_lines_per_worker = (num_lines + nworker - 1) // nworker

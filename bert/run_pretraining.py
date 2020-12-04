@@ -22,6 +22,12 @@ import os
 import modeling
 import optimization
 import tensorflow as tf
+from tensorflow import ConfigProto
+from tensorflow import InteractiveSession
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 flags = tf.flags
 

@@ -16,14 +16,30 @@
 import sentencepiece as spm
 
 
-class SentencePieceTokenizer:
+class SentencePieceTokenizer(object):
     """Runs Google's SentencePiece tokenization."""
-
-    def __init__(self, model_file, lowercase=False):
-        self.sp = spm.SentencePieceProcessor()
+    def __init__(self, model, lowercase=False):
         self.lowercase = lowercase
-        self.sp.Load(model_file)
-        self.word2id, self.word2id = self.create_word2id_id2word()
+        self.model = model
+
+        self.sp = spm.SentencePieceProcessor()
+        self.sp.Load(self.model)
+        self.word2id, self.id2word = self.create_word2id_id2word()
+
+    def tokenize(self, text):
+        if self.lowercase:
+            text = text.lower()
+
+        return self.sp.EncodeAsPieces(text)
+
+    def ids_to_tokens(self, ids):
+        return [self.sp.IdToPiece(int(id)) for id in ids]
+
+    def tokens_to_ids(self, tokens):
+        return [self.sp.PieceToId(token) for token in tokens]
+
+    def detokenize(self, tokens):
+        return "".join(tokens).replace("▁", " ")
 
     def create_word2id_id2word(self):
         word2id = {
@@ -33,14 +49,3 @@ class SentencePieceTokenizer:
         id2word = dict(zip(word2id.values(), word2id.keys()))
 
         return word2id, id2word
-
-    def tokenize(self, text):
-        if self.lowercase:
-            text = text.lower()
-        return self.sp.EncodeAsPieces(text)
-
-    def ids_to_tokens(self, ids):
-        return [self.id2word[int(id)] for id in ids]
-
-    def tokens_to_ids(self, tokens):
-        return [self.word2id[token] for token in tokens]

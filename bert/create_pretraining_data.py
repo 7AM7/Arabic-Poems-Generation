@@ -17,21 +17,36 @@ import os
 import collections
 import random
 import time
-from multiprocessing import Pool
+import multiprocessing
 
 import tensorflow as tf
 
-from bert.tokenization import SentencePieceTokenizer
+from tokenization import SentencePieceTokenizer
 
 flags = tf.flags
 FLAGS = flags.FLAGS
 
+class NoDaemonProcess(multiprocessing.Process):
+    # make 'daemon' attribute always return False
+    def _get_daemon(self):
+        return False
+
+    def _set_daemon(self, value):
+        pass
+
+    daemon = property(_get_daemon, _set_daemon)
+
+
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class MyPool(multiprocessing.pool.Pool):
+    Process = NoDaemonProcess
 
 class TrainingInstance(object):
     """A single training instance (sentence pair)."""
 
     def __init__(
-        self, tokens, segment_ids, masked_lm_positions, masked_lm_labels, is_random_next
+            self, tokens, segment_ids, masked_lm_positions, masked_lm_labels, is_random_next
     ):
         self.tokens = tokens
         self.segment_ids = segment_ids
@@ -88,29 +103,30 @@ def create_float_feature(values):
     return feature
 
 
-def transform(instance, tokenizer, max_seq_length, max_predictions_per_seq):
+def transform(instance, tokenizer):
     """Transform instance to inputs for MLM and NSP."""
     input_ids = tokenizer.tokens_to_ids(instance.tokens)
-    assert len(input_ids) <= max_seq_length
     input_mask = [1] * len(input_ids)
     segment_ids = list(instance.segment_ids)
-    while len(input_ids) < max_seq_length:
-        input_ids.append(0)
-        input_mask.append(0)
-        segment_ids.append(0)
+    assert len(input_ids) <= FLAGS.max_seq_length
 
-    assert len(input_ids) == max_seq_length
-    assert len(input_mask) == max_seq_length
-    assert len(segment_ids) == max_seq_length
+    max_lens = FLAGS.max_seq_length
+    input_ids.extend([0] * (max_lens - len(input_ids)))
+    input_mask.extend([0] * (max_lens - len(input_mask)))
+    segment_ids.extend([0] * (max_lens- len(segment_ids)))
+
+    assert len(input_ids) == FLAGS.max_seq_length
+    assert len(input_mask) == FLAGS.max_seq_length
+    assert len(segment_ids) == FLAGS.max_seq_length
 
     masked_lm_positions = list(instance.masked_lm_positions)
     masked_lm_ids = tokenizer.tokens_to_ids(instance.masked_lm_labels)
     masked_lm_weights = [1.0] * len(masked_lm_ids)
 
-    while len(masked_lm_positions) < max_predictions_per_seq:
-        masked_lm_positions.append(0)
-        masked_lm_ids.append(0)
-        masked_lm_weights.append(0.0)
+    max_pred_seq = FLAGS.max_predictions_per_seq
+    masked_lm_positions.extend([0] * (max_pred_seq - len(masked_lm_positions)))
+    masked_lm_ids.extend([0] * (max_pred_seq - len(masked_lm_positions)))
+    masked_lm_weights.extend([0.0] * (max_pred_seq - len(masked_lm_positions)))
 
     next_sentence_label = 1 if instance.is_random_next else 0
     features = collections.OrderedDict()
@@ -125,13 +141,11 @@ def transform(instance, tokenizer, max_seq_length, max_predictions_per_seq):
     return features
 
 
-def convert_to_tfexample(
-    instances, tokenizer, max_seq_length, max_predictions_per_seq
-):
+def convert_to_tfexample(instances, tokenizer):
     """Create TF example files from `TrainingInstance`s."""
     tf_examples = []
     for inst_index, instance in enumerate(instances):
-        features = transform(instance, tokenizer, max_seq_length, max_predictions_per_seq)
+        features = transform(instance, tokenizer)
         tf_example = tf.train.Example(features=tf.train.Features(feature=features))
         tf_examples.append(tf_example)
 
@@ -163,7 +177,8 @@ def write_to_files(features, output_file):
     """Create TF example files from `TrainingInstance`s."""
     total_written = len(features)
     writer = tf.python_io.TFRecordWriter(output_file)
-    writer.write(features.SerializeToString())
+    for feature in features:
+        writer.write(feature.SerializeToString())
     writer.close()
 
     tf.logging.info('Wrote %d total instances', total_written)
@@ -178,18 +193,17 @@ def create_training_instances(x):
     # (2) Blank lines between documents. Document boundaries are needed so
     # that the "next sentence prediction" task doesn't span between documents.
 
-    (input_files, tokenizer, max_seq_length,
-     dupe_factor, short_seq_prob, masked_lm_prob,
-     max_predictions_per_seq, whole_word_mask,
-     nworker, worker_pool, output_file) = x
+    (input_files, tokenizer, output_file) = x
     time_start = time.time()
+    nworker = FLAGS.num_workers
+    worker_pool = None
     if nworker > 1:
-        assert worker_pool is not None
+        worker_pool = multiprocessing.Pool(nworker)
 
     all_documents = [[]]
     for input_file in input_files:
         with tf.io.gfile.GFile(input_file, "r") as reader:
-            lines = reader.readlines()
+            lines = reader.read().split('\n')
             num_lines = len(lines)
             num_lines_per_worker = (num_lines + nworker - 1) // nworker
             process_args = []
@@ -209,65 +223,62 @@ def create_training_instances(x):
             for tokenized_result in tokenized_results:
                 for line in tokenized_result:
                     if not line:
-                        if all_documents[-1]:
-                            all_documents.append([])
+                        all_documents.append([])
                     else:
                         all_documents[-1].append(line)
 
     # Remove empty documents
     all_documents = [x for x in all_documents if x]
-
     # generate training instances
     vocab_words = list(tokenizer.word2id.keys())
     instances = []
     if worker_pool:
         process_args = []
         for document_index in range(len(all_documents)):
-            process_args.append((
-                    all_documents, document_index,
-                    max_seq_length, short_seq_prob,
-                    masked_lm_prob, max_predictions_per_seq,
-                    whole_word_mask, vocab_words))
-        for _ in range(dupe_factor):
+            process_args.append((all_documents, document_index, vocab_words))
+
+        for _ in range(FLAGS.dupe_factor):
             instances_results = worker_pool.map(
                 create_instances_from_document, process_args)
             for instances_result in instances_results:
                 instances.extend(instances_result)
 
         tfexample_instances = worker_pool.apply(
-            convert_to_tfexample, (instances, tokenizer,
-                                   max_seq_length, max_predictions_per_seq))
+            convert_to_tfexample, (instances, tokenizer))
     else:
-        for _ in range(dupe_factor):
+        for _ in range(FLAGS.dupe_factor):
             for document_index in range(len(all_documents)):
                 instances.extend(
                     create_instances_from_document(
-                        (all_documents, document_index, max_seq_length, short_seq_prob,
-                         masked_lm_prob, max_predictions_per_seq, whole_word_mask, vocab_words)))
-        tfexample_instances = convert_to_tfexample(instances, tokenizer,
-                                                   max_seq_length, max_predictions_per_seq)
+                        (all_documents, document_index, vocab_words)))
+        tfexample_instances = convert_to_tfexample(instances, tokenizer)
 
-    features = tfexample_instances
     # write output to files. Used when pre-generating files
     if output_file:
         tf.logging.info('*** Writing to output file %s ***', output_file)
+        features = tfexample_instances
         write_to_files(features, output_file)
         features = None
+    else:
+        features = tfexample_instances
+
+    if worker_pool:
+        worker_pool.close()
+        worker_pool.join()
 
     time_end = time.time()
     tf.logging.info('Process %d files took %.1f s',
-                  len(input_files), time_end - time_start)
+                    len(input_files), time_end - time_start)
     return features
 
 
 def create_instances_from_document(x):
     """Creates `TrainingInstance`s for a single document."""
-    (all_documents, document_index, max_seq_length, short_seq_prob,
-    masked_lm_prob, max_predictions_per_seq, whole_word_mask, vocab_words) = x
+    (all_documents, document_index, vocab_words) = x
     document = all_documents[document_index]
 
     # Account for [CLS], [SEP], [SEP]
-    max_num_tokens = max_seq_length - 3
+    max_num_tokens = FLAGS.max_seq_length - 3
 
     # We *usually* want to fill up the entire sequence since we are padding
     # to `max_seq_length` anyways, so short sequences are generally wasted
@@ -277,7 +288,7 @@ def create_instances_from_document(x):
     # The `target_seq_length` is just a rough target however, whereas
     # `max_seq_length` is a hard limit.
     target_seq_length = max_num_tokens
-    if random.random() < short_seq_prob:
+    if random.random() < FLAGS.short_seq_prob:
         target_seq_length = random.randint(2, max_num_tokens)
 
     # We DON'T just concatenate all of the tokens from a document into a long
@@ -359,19 +370,14 @@ def create_instances_from_document(x):
                 segment_ids.append(1)
 
                 (tokens, masked_lm_positions,
-                    masked_lm_labels) = create_masked_lm_predictions(
-                    tokens, masked_lm_prob,
-                    max_predictions_per_seq,
-                    whole_word_mask,
-                    vocab_words
-                )
+                 masked_lm_labels) = create_masked_lm_predictions(
+                    tokens, vocab_words)
                 instance = TrainingInstance(
                     tokens=tokens,
                     segment_ids=segment_ids,
                     is_random_next=is_random_next,
                     masked_lm_positions=masked_lm_positions,
-                    masked_lm_labels=masked_lm_labels,
-                )
+                    masked_lm_labels=masked_lm_labels)
                 instances.append(instance)
             current_chunk = []
             current_length = 0
@@ -383,9 +389,7 @@ def create_instances_from_document(x):
 MaskedLmInstance = collections.namedtuple("MaskedLmInstance", ["index", "label"])
 
 
-def create_masked_lm_predictions(
-    tokens, masked_lm_prob, max_predictions_per_seq, whole_word_mask, vocab_words
-):
+def create_masked_lm_predictions(tokens, vocab_words):
     """Creates the predictions for the masked LM objective."""
     cand_indexes = []
     for (i, token) in enumerate(tokens):
@@ -394,17 +398,14 @@ def create_masked_lm_predictions(
         # Whole Word Masking means that if we mask all of the wordpieces
         # corresponding to an original word. When a word has been split into
         # WordPieces, the first token does not have any marker and any subsequence
-        # tokens are prefixed with '_'. So whenever we see the ## token, we
+        # tokens are prefixed with ##. So whenever we see the ## token, we
         # append it to the previous set of word indexes.
         #
         # Note that Whole Word Masking does *not* change the training code
         # at all -- we still predict each WordPiece independently, softmaxed
         # over the entire vocabulary.
-        if (
-            whole_word_mask
-            and len(cand_indexes) >= 1
-            and token.startswith("_")
-        ):
+        if (FLAGS.do_whole_word_mask and len(cand_indexes) >= 1 and
+                token.startswith("_")):
             cand_indexes[-1].append(i)
         else:
             cand_indexes.append([i])
@@ -413,9 +414,8 @@ def create_masked_lm_predictions(
 
     output_tokens = list(tokens)
 
-    num_to_predict = min(
-        max_predictions_per_seq, max(1, int(round(len(tokens) * masked_lm_prob)))
-    )
+    num_to_predict = min(FLAGS.max_predictions_per_seq,
+                         max(1, int(round(len(tokens) * FLAGS.masked_lm_prob))))
 
     masked_lms = []
     covered_indexes = set()
@@ -435,6 +435,7 @@ def create_masked_lm_predictions(
             continue
         for index in index_set:
             covered_indexes.add(index)
+
             masked_token = None
             # 80% of the time, replace with [MASK]
             if random.random() < 0.8:
@@ -492,10 +493,9 @@ def main(_):
         os.makedirs(output_dir)
 
     tokenizer = SentencePieceTokenizer(
-        model_file=FLAGS.sentencepiece_file,
+        model=FLAGS.sentencepiece_file,
         lowercase=FLAGS.do_lower_case,
     )
-
     input_files = []
     for input_pattern in FLAGS.input_file.split(','):
         input_files.extend(tf.gfile.Glob(input_pattern))
@@ -505,7 +505,7 @@ def main(_):
         tf.logging.info('\t%s', input_file)
 
     num_inputs = len(input_files)
-    num_outputs = min(FLAGS.num_outputs, len(input_files))
+    num_outputs = min(FLAGS.num_outputs, num_inputs)
     tf.logging.info('*** Reading from %d input files ***', num_inputs)
 
     # calculate the number of splits
@@ -523,21 +523,21 @@ def main(_):
         output_file = os.path.join(
             output_dir, 'part-{}.tfrecord'.format(str(i).zfill(3)))
         count += len(file_split)
-        process_args.append((file_split, tokenizer, FLAGS.max_seq_length, FLAGS.dupe_factor,
-                             FLAGS.short_seq_prob, FLAGS.masked_lm_prob,
-                             FLAGS.max_predictions_per_seq, FLAGS.do_whole_word_mask,
-                             1, None, output_file))
-    # sanity check
-    assert count == len(input_files)
 
-    # dispatch to workers
+        process_args.append((file_split, tokenizer, output_file))
+
     nworker = FLAGS.num_workers
     if nworker > 1:
-        pool = Pool(nworker)
+        pool = MyPool(processes=nworker)
         pool.map(create_training_instances, process_args)
+        pool.close()
+        pool.join()
     else:
         for process_arg in process_args:
             create_training_instances(process_arg)
+
+    # sanity check
+    assert count == len(input_files)
 
     time_end = time.time()
     tf.logging.info('Time cost=%.1f', time_end - time_start)
@@ -604,3 +604,5 @@ if __name__ == "__main__":
     flags.mark_flag_as_required("output_dir")
     flags.mark_flag_as_required("sentencepiece_file")
     tf.app.run()
+
+

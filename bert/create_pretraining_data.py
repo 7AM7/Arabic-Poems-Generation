@@ -17,7 +17,7 @@ import os
 import collections
 import random
 import time
-import multiprocessing
+from multiprocessing import Pool
 
 import tensorflow as tf
 
@@ -26,21 +26,6 @@ from tokenization import SentencePieceTokenizer
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-class NoDaemonProcess(multiprocessing.Process):
-    # make 'daemon' attribute always return False
-    def _get_daemon(self):
-        return False
-
-    def _set_daemon(self, value):
-        pass
-
-    daemon = property(_get_daemon, _set_daemon)
-
-
-# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-# because the latter is only a wrapper function, not a proper class.
-class MyPool(multiprocessing.pool.Pool):
-    Process = NoDaemonProcess
 
 class TrainingInstance(object):
     """A single training instance (sentence pair)."""
@@ -195,31 +180,12 @@ def create_training_instances(x):
 
     (input_files, tokenizer, output_file) = x
     time_start = time.time()
-    nworker = FLAGS.num_workers
-    worker_pool = None
-    if nworker > 1:
-        worker_pool = multiprocessing.Pool(nworker)
 
     all_documents = [[]]
     for input_file in input_files:
         with tf.io.gfile.GFile(input_file, "r") as reader:
             lines = reader.read().split('\n')
-            num_lines = len(lines)
-            num_lines_per_worker = (num_lines + nworker - 1) // nworker
-            process_args = []
-
-            # tokenize in parallel
-            for worker_idx in range(nworker):
-                start = worker_idx * num_lines_per_worker
-                end = min((worker_idx + 1) * num_lines_per_worker, num_lines)
-                process_args.append((lines[start:end], tokenizer))
-
-            if worker_pool:
-                tokenized_results = worker_pool.map(
-                    tokenize_lines, process_args)
-            else:
-                tokenized_results = [tokenize_lines(process_args[0])]
-
+            tokenized_results = tokenize_lines((lines, tokenizer))
             for tokenized_result in tokenized_results:
                 for line in tokenized_result:
                     if not line:
@@ -232,26 +198,13 @@ def create_training_instances(x):
     # generate training instances
     vocab_words = list(tokenizer.word2id.keys())
     instances = []
-    if worker_pool:
-        process_args = []
+
+    for _ in range(FLAGS.dupe_factor):
         for document_index in range(len(all_documents)):
-            process_args.append((all_documents, document_index, vocab_words))
-
-        for _ in range(FLAGS.dupe_factor):
-            instances_results = worker_pool.map(
-                create_instances_from_document, process_args)
-            for instances_result in instances_results:
-                instances.extend(instances_result)
-
-        tfexample_instances = worker_pool.apply(
-            convert_to_tfexample, (instances, tokenizer))
-    else:
-        for _ in range(FLAGS.dupe_factor):
-            for document_index in range(len(all_documents)):
-                instances.extend(
-                    create_instances_from_document(
-                        (all_documents, document_index, vocab_words)))
-        tfexample_instances = convert_to_tfexample(instances, tokenizer)
+            instances.extend(
+                create_instances_from_document(
+                    (all_documents, document_index, vocab_words)))
+    tfexample_instances = convert_to_tfexample(instances, tokenizer)
 
     # write output to files. Used when pre-generating files
     if output_file:
@@ -261,10 +214,6 @@ def create_training_instances(x):
         features = None
     else:
         features = tfexample_instances
-
-    if worker_pool:
-        worker_pool.close()
-        worker_pool.join()
 
     time_end = time.time()
     tf.logging.info('Process %d files took %.1f s',
@@ -528,7 +477,7 @@ def main(_):
 
     nworker = FLAGS.num_workers
     if nworker > 1:
-        pool = MyPool(processes=nworker)
+        pool = Pool(processes=nworker)
         pool.map(create_training_instances, process_args)
         pool.close()
         pool.join()

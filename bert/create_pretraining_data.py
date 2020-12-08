@@ -22,7 +22,7 @@ from multiprocessing import Pool
 import tensorflow as tf
 import six
 
-from tokenization import SentencePieceTokenizer
+from bert import tokenization
 
 flags = tf.flags
 FLAGS = flags.FLAGS
@@ -463,9 +463,9 @@ def main(_):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    tokenizer = SentencePieceTokenizer(
-        model=FLAGS.sentencepiece_file,
-        lowercase=FLAGS.do_lower_case,
+    tokenizer = tokenization.FullTokenizer(
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case,
+        spm_model_file=FLAGS.spm_model_file
     )
     input_files = []
     for input_pattern in FLAGS.input_file.split(','):
@@ -523,7 +523,7 @@ if __name__ == "__main__":
         "output_dir", None, "Output TF records directory"
     )
 
-    flags.DEFINE_string("sentencepiece_file", None, "The sentecepiece mode path")
+    flags.DEFINE_string("spm_model_file", None, "The model file for sentence piece tokenization.")
 
     flags.DEFINE_bool(
         "do_lower_case",
@@ -573,7 +573,7 @@ if __name__ == "__main__":
     )
     flags.mark_flag_as_required("input_file")
     flags.mark_flag_as_required("output_dir")
-    flags.mark_flag_as_required("sentencepiece_file")
+    flags.mark_flag_as_required("spm_model_file")
     tf.app.run()
 
 

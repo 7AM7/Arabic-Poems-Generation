@@ -20,6 +20,7 @@ import time
 from multiprocessing import Pool
 
 import tensorflow as tf
+import six
 
 from tokenization import SentencePieceTokenizer
 
@@ -337,6 +338,27 @@ def create_instances_from_document(x):
 
 MaskedLmInstance = collections.namedtuple("MaskedLmInstance", ["index", "label"])
 
+def _is_start_piece_sp(piece):
+  """Check if the current piece is the starting with (sentence piece)."""
+  special_pieces = set(list('!"#$%&\"()*+,-./:;?@[\\]^_`{|}~'))
+  special_pieces.add(u"€".encode("utf-8"))
+  special_pieces.add(u"£".encode("utf-8"))
+  # Note(mingdachen):
+  # For foreign characters, we always treat them as a whole piece.
+  english_chars = set(list("abcdefghijklmnopqrstuvwxyz"))
+  ARABIC_NORMALIZED_CHARACHTERS = set(list("0122334556778899ءءاااااااااااااااببببببببببببببتتتتتتتتتتتتتتتتتتتتثثثثثثثجججججججججججججججججججحححححخخخخخخخددددددددددددددذذذذذرررررررررررررزززسسسسسسششششششصصصصصضضضضضضططططظظظظظعععععغغغغغغفففففففففففففففففقققققققككككككككككككككككككككككككككككككككككللللللللممممننننننننننننننهههههههههههههههههههههوووووووووووووووووووووووووووويييييييييييييييييييييييييييييييييييييي"))
+
+  if (six.ensure_str(piece).startswith("▁") or
+      six.ensure_str(piece).startswith("<") or piece in special_pieces or
+      not all([i.lower() in english_chars.union(special_pieces)
+               for i in piece]) or
+      not all([i in ARABIC_NORMALIZED_CHARACHTERS.union(special_pieces)
+               for i in piece])
+  ):
+    return True
+
+  return False
+
 
 def create_masked_lm_predictions(tokens, vocab_words):
     """Creates the predictions for the masked LM objective."""
@@ -354,7 +376,7 @@ def create_masked_lm_predictions(tokens, vocab_words):
         # at all -- we still predict each WordPiece independently, softmaxed
         # over the entire vocabulary.
         if (FLAGS.do_whole_word_mask and len(cand_indexes) >= 1 and
-                token.startswith("_")):
+                not _is_start_piece_sp(token)):
             cand_indexes[-1].append(i)
         else:
             cand_indexes.append([i])

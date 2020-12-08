@@ -19,19 +19,22 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 import collections
 import random
-from albert import tokenization
+from multiprocessing import Pool
+
 import numpy as np
 import six
 from six.moves import range
 from six.moves import zip
 import tensorflow.compat.v1 as tf
 
+import tokenization
+
+
 flags = tf.flags
-
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string("input_file", None,
                     "Input raw text file (or comma-separated list of files).")
 

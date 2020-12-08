@@ -22,11 +22,13 @@ from __future__ import print_function
 
 import collections
 import unicodedata
+
 import six
 from six.moves import range
 import tensorflow.compat.v1 as tf
 import tensorflow_hub as hub
 import sentencepiece as spm
+
 
 SPIECE_UNDERLINE = u"▁".encode("utf-8")
 

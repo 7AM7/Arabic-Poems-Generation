@@ -19,16 +19,16 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import time
+
+import tensorflow as tf
+
 import modeling
 import optimization
-import optimization
-import tensorflow as tf
 
 
 flags = tf.flags
-
 FLAGS = flags.FLAGS
-
 ## Required parameters
 flags.DEFINE_string(
     "bert_config_file",
@@ -38,8 +38,13 @@ flags.DEFINE_string(
 )
 
 flags.DEFINE_string(
-    "input_file", None, "Input TF example files (can be a glob or comma separated)."
+    "input_file", None, "Input TF example for training files (can be a glob or comma separated)."
 )
+
+flags.DEFINE_string(
+    "eval_file", None, "Input TF example for validation files (can be a glob or comma separated)."
+)
+
 
 flags.DEFINE_string(
     "output_dir",
@@ -508,6 +513,11 @@ def main(_):
     for input_pattern in FLAGS.input_file.split(","):
         input_files.extend(tf.gfile.Glob(input_pattern))
 
+    if FLAGS.eval_file:
+        eval_files = []
+        for input_pattern in FLAGS.eval_file.split(","):
+            eval_files.extend(tf.gfile.Glob(input_pattern))
+
     # tf.logging.info("*** Input Files ***")
     # for input_file in input_files:
     #     tf.logging.info("  %s" % input_file)
@@ -569,6 +579,11 @@ def main(_):
     if FLAGS.do_eval:
         tf.logging.info("***** Running evaluation *****")
         tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
+        output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
+        writer = tf.gfile.GFile(output_eval_file, "w")
+
+        if FLAGS.eval_file:
+            input_files = eval_files
 
         eval_input_fn = input_fn_builder(
             input_files=input_files,
@@ -576,15 +591,40 @@ def main(_):
             max_predictions_per_seq=FLAGS.max_predictions_per_seq,
             is_training=False,
         )
+        best_perf = 0
+        global_step = -1
+        key_name = "masked_lm_accuracy"
+        while global_step < FLAGS.num_train_steps:
+            if estimator.latest_checkpoint() is None:
+                tf.logging.info("No checkpoint found yet. Sleeping.")
+                time.sleep(1)
+            else:
+                result = estimator.evaluate(
+                    input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+                global_step = result["global_step"]
+                tf.logging.info("***** Eval results *****")
+                checkpoint_path = estimator.latest_checkpoint()
+                for key in sorted(result.keys()):
+                    tf.logging.info("  %s = %s", key, str(result[key]))
+                    writer.write("%s = %s\n" % (key, str(result[key])))
+                    if result[key_name] > best_perf:
+                        best_perf = result[key_name]
+                        for ext in ["meta", "data-00000-of-00001", "index"]:
+                            src_ckpt = checkpoint_path + ".{}".format(ext)
+                            tgt_ckpt = checkpoint_path.rsplit(
+                                "-", 1)[0] + "-best.{}".format(ext)
+                            tf.logging.info("saving {} to {}".format(src_ckpt, tgt_ckpt))
+                            tf.gfile.Copy(src_ckpt, tgt_ckpt, overwrite=True)
+                            writer.write("saved {} to {}\n".format(src_ckpt, tgt_ckpt))
+        writer.close()
 
-        result = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
-
-        output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
-        with tf.gfile.GFile(output_eval_file, "w") as writer:
-            tf.logging.info("***** Eval results *****")
-            for key in sorted(result.keys()):
-                tf.logging.info("  %s = %s", key, str(result[key]))
-                writer.write("%s = %s\n" % (key, str(result[key])))
+        # result = estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
+        #
+        # with tf.gfile.GFile(output_eval_file, "w") as writer:
+        #     tf.logging.info("***** Eval results *****")
+        #     for key in sorted(result.keys()):
+        #         tf.logging.info("  %s = %s", key, str(result[key]))
+        #         writer.write("%s = %s\n" % (key, str(result[key])))
 
 
 if __name__ == "__main__":

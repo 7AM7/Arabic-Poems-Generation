@@ -21,6 +21,7 @@ from __future__ import print_function
 import os
 import modeling
 import optimization
+import optimization
 import tensorflow as tf
 
 
@@ -584,6 +585,7 @@ def main(_):
             for key in sorted(result.keys()):
                 tf.logging.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
+
 
 if __name__ == "__main__":
     flags.mark_flag_as_required("input_file")

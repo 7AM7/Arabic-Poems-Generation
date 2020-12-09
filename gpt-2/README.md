@@ -1,68 +1,102 @@
-<img src="./.github/logo.svg" width="480">
+# gpt-2
 
-# **GPT2** for Multiple Languages
+Code from the paper ["Language Models are Unsupervised Multitask Learners"](https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf).
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/imcaspar/gpt2-ml/blob/master/pretrained_model_demo.ipynb)
-[![GitHub](https://img.shields.io/github/license/imcaspar/gpt2-ml)](https://github.com/imcaspar/gpt2-ml)
-[![GitHub All Releases](https://img.shields.io/github/downloads/imcaspar/gpt2-ml/total)](https://github.com/imcaspar/gpt2-ml/releases)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/imcaspar/gpt2-ml/issues)
-[![GitHub stars](https://img.shields.io/github/stars/imcaspar/gpt2-ml?style=social)](https://github.com/imcaspar/gpt2-ml)
+We have currently released small (117M parameter) and medium (345M parameter) versions of GPT-2.  While we have not released the larger models, we have [released a dataset](https://github.com/openai/gpt-2-output-dataset) for researchers to study their behaviors.
 
-[**中文说明**](./README_CN.md) | [**English**](./README.md)
+See more details in our [blog post](https://blog.openai.com/better-language-models/).
 
-- [x] Simplifed GPT2 train scripts（based on Grover, supporting TPUs）
-- [x] Ported bert tokenizer, multilingual corpus compatible
-- [x] 1.5B GPT2 pretrained Chinese model ( ~15G corpus, 10w steps )
-- [x] Batteries-included Colab demo [#](https://github.com/imcaspar/gpt2-ml#google-colab)
-- [x] 1.5B GPT2 pretrained Chinese model ( ~30G corpus, 22w steps )
+## Usage
 
+This repository is meant to be a starting point for researchers and engineers to experiment with GPT-2.
 
-## Pretrained Model
-| Size            | Language | Corpus | Vocab                 | Link                                                         | SHA256                                                       |
-| --------------- | -------- | ------ | --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 1.5B parameters | Chinese  | ~30G   | CLUE ( 8021 tokens )  | [**Google Drive**](https://drive.google.com/file/d/1mT_qCQg4AWnAXTwKfsyyRWCRpgPrBJS3) | e698cc97a7f5f706f84f58bb469d614e<br/>51d3c0ce5f9ab9bf77e01e3fcb41d482 |
-| 1.5B parameters | Chinese  | ~15G   | Bert ( 21128 tokens ) | [**Google Drive**](https://drive.google.com/file/d/1IzWpQ6I2IgfV7CldZvFJnZ9byNDZdO4n) | 4a6e5124df8db7ac2bdd902e6191b807<br/>a6983a7f5d09fb10ce011f9a073b183e |
+### Some caveats
 
-Corpus from [THUCNews](http://thuctc.thunlp.org/#%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E6%95%B0%E6%8D%AE%E9%9B%86THUCNews) and [nlp_chinese_corpus](https://github.com/brightmart/nlp_chinese_corpus)
+- GPT-2 models' robustness and worst case behaviors are not well-understood.  As with any machine-learned model, carefully evaluate GPT-2 for your use case, especially if used without fine-tuning or in safety-critical applications where reliability is important.
+- The dataset our GPT-2 models were trained on contains many texts with [biases](https://twitter.com/TomerUllman/status/1101485289720242177) and factual inaccuracies, and thus GPT-2 models are likely to be biased and inaccurate as well.
+- To avoid having samples mistaken as human-written, we recommend clearly labeling samples as synthetic before wide dissemination.  Our models are often incoherent or inaccurate in subtle ways, which takes more than a quick read for a human to notice.
 
-Using [Cloud TPU Pod v3-256](https://cloud.google.com/tpu/docs/types-zones#types) to train 22w steps
+### Work with us
 
-![loss](./.github/loss.png)
+Please [let us know](mailto:languagequestions@openai.com) if you’re doing interesting research with or working on applications of GPT-2!  We’re especially interested in hearing from and potentially working with those who are studying
+- Potential malicious use cases and defenses against them (e.g. the detectability of synthetic text)
+- The extent of problematic content (e.g. bias) being baked into the models and effective mitigations
 
+## Development
 
-## Google Colab
-With just 2 clicks (not including Colab auth process), the 1.5B pretrained Chinese model demo is ready to go:
+See [DEVELOPERS.md](./DEVELOPERS.md)
 
-[**[Colab Notebook]**](https://colab.research.google.com/github/imcaspar/gpt2-ml/blob/master/pretrained_model_demo.ipynb)
+## Contributors
 
-<img src="./.github/demo.png" width="640">
+See [CONTRIBUTORS.md](./CONTRIBUTORS.md)
 
-## Train
+## Fine tuning on custom datasets
 
-## Disclaimer
-The contents in this repository are for academic research purpose, and we do not provide any conclusive remarks.
+To retrain GPT-2 117M model on a custom text dataset:
+
+```
+PYTHONPATH=src ./train.py --dataset <file|directory|glob>
+```
+
+If you want to precompute the dataset's encoding for multiple runs, you can instead use:
+
+```
+PYTHONPATH=src ./encode.py <file|directory|glob> /path/to/encoded.npz
+PYTHONPATH=src ./train.py --dataset /path/to/encoded.npz
+```
+
+### Gradient Checkpointing
+
+https://github.com/openai/gradient-checkpointing is included to reduce the memory requirements of the model, and can be enabled by `--memory_saving_gradients`. The checkpoints are currently chosen manually (poorly) by just adding layer 10 to the 'checkpoints' collection in model.py. `--memory_saving_gradients` is enabled by default for training the 345M model.
+
+### Validation loss
+
+Set `--val_every` to a number of steps `N > 0`, and "validation" loss against a fixed sample of the dataset will be calculated every N steps to get a better sense of training progress. N around 200 suggested. You can set `--val_dataset` to choose a separate validation dataset, otherwise it defaults to a sample from the train dataset (so not a real cross-validation loss!).
+
+### Optimizer
+
+You can use SGD instead of Adam with `--optimizer sgd`. This also helps conserve memory when training the 345M model. Note: the learning rate needs to be adjusted for SGD, due to not having Adam's gradient normalization (0.0006 seems to be a good number from some experiments).
+
+### Multi gpu (out of date)
+
+To do distributed on multiple GPUs or machines using Horovod:
+
+```
+mpirun -np 4 \
+    -H localhost:4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -x PYTHONPATH=src \
+    -mca pml ob1 -mca btl ^openib \
+    /home/jovyan/gpt-2/train-horovod.py --dataset encoded.npz
+```
+
+## GPT-2 samples
+
+| WARNING: Samples are unfiltered and may contain offensive content. |
+| --- |
+
+While we have not yet released GPT-2 itself, you can see some samples from it in the `gpt-2-samples` folder.
+We show unconditional samples with default settings (temperature 1 and no truncation), with temperature 0.7, and with truncation with top_k 40.
+We show conditional samples, with contexts drawn from `WebText`'s test set, with default settings (temperature 1 and no truncation), with temperature 0.7, and with truncation with top_k 40.
 
 ## Citation
 
+Please use the following bibtex entry:
 ```
-@misc{GPT2-ML,
-  author = {Zhibo Zhang},
-  title = {GPT2-ML: GPT-2 for Multiple Languages},
-  year = {2019},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/imcaspar/gpt2-ml}},
+@article{radford2019language,
+  title={Language Models are Unsupervised Multitask Learners},
+  author={Radford, Alec and Wu, Jeff and Child, Rewon and Luan, David and Amodei, Dario and Sutskever, Ilya},
+  year={2019}
 }
 ```
 
-## Reference
-https://github.com/google-research/bert
+## Future work
 
-https://github.com/rowanz/grover
+We may release code for evaluating the models on various benchmarks.
 
-Research supported with Cloud TPUs from Google's TensorFlow Research Cloud (TFRC)
+We are still considering release of the larger models.
 
-## Press
-[[机器之心] 只需单击三次，让中文GPT-2为你生成定制故事](https://mp.weixin.qq.com/s/FpoSNNKZSQOE2diPvJDHog)
+## License
 
-[[科学空间] 现在可以用Keras玩中文GPT2了](https://kexue.fm/archives/7292)
+[MIT](./LICENSE)

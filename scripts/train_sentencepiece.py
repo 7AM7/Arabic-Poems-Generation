@@ -68,7 +68,8 @@ class TrainSentencePiece:
                 vocab_size=self.vocab_size,
                 model_type=self.model_type,
                 shuffle_input_sentence=True,
-                unk_surface="[UNK]",
+                unk_piece='[UNK]',
+                pad_piece='[PAD]',
             )
 
             logging.info("SentencePiece model/vocab Trained Successfully.")
@@ -124,8 +125,8 @@ def main():
         "--user_defined_symbols",
         help="sentencepiece model control symbols(e.g.: [<pad>,<mask>])",
         required=False,
-        default="[PAD], [UNK], [CLS], [SEP], [MASK]",
-        type=lambda s: [str(item) for item in s.split(",")],
+        default="[CLS], [SEP], [MASK]",
+        type=lambda s: [str(item).strip() for item in s.split(",")],
     )
 
     args = parser.parse_args()

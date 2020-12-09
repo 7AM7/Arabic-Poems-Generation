@@ -59,7 +59,7 @@ parser.add_argument(
     type=int,
     help='Max sequence length',
 )
-parser.add_argument("--vocab-file", required=False,
+parser.add_argument("--vocab-file", default=None,  required=False,
                     help="Location of vocabulary file.")
 
 parser.add_argument("--spm_model_file", required=True,

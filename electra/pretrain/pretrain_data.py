@@ -37,6 +37,7 @@ def get_input_fn(config: configure_pretraining.PretrainingConfig, is_training,
   for input_pattern in config.pretrain_tfrecords.split(","):
     input_files.extend(tf.io.gfile.glob(input_pattern))
   utils.log("input_files len: {}".format(len(input_files)))
+  utils.log("input_files path: {}".format(config.pretrain_tfrecords))
 
   def input_fn(params):
     """The actual input function."""

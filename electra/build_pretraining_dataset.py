@@ -182,8 +182,7 @@ def write_examples(job_id, args):
       num_jobs=args.num_processes,
       blanks_separate_docs=args.blanks_separate_docs,
       do_lower_case=args.do_lower_case,
-      spm_model_file=args.spm_model_file,
-      num_out_files=len(fnames)
+      spm_model_file=args.spm_model_file
   )
 
   log("Writing tf examples")

@@ -26,6 +26,7 @@ from model import tokenization
 from util import utils
 
 
+
 def create_int_feature(values):
   feature = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
   return feature
@@ -167,6 +168,10 @@ def write_examples(job_id, args):
     print("Job {}:".format(job_id), msg)
 
   log("Creating example writer")
+  fnames = sorted(tf.io.gfile.listdir(args.corpus_dir))
+  fnames = [f for (i, f) in enumerate(fnames)
+            if i % args.num_processes == job_id]
+  random.shuffle(fnames)
   example_writer = ExampleWriter(
       job_id=job_id,
       vocab_file=args.vocab_file,
@@ -175,13 +180,11 @@ def write_examples(job_id, args):
       num_jobs=args.num_processes,
       blanks_separate_docs=args.blanks_separate_docs,
       do_lower_case=args.do_lower_case,
-      spm_model_file=args.spm_model_file
+      spm_model_file=args.spm_model_file,
+      num_out_files=len(fnames)
   )
+
   log("Writing tf examples")
-  fnames = sorted(tf.io.gfile.listdir(args.corpus_dir))
-  fnames = [f for (i, f) in enumerate(fnames)
-            if i % args.num_processes == job_id]
-  random.shuffle(fnames)
   start_time = time.time()
   for file_no, fname in enumerate(fnames):
     if file_no > 0:

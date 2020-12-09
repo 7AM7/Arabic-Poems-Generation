@@ -29,7 +29,7 @@ class PretrainingConfig(object):
     self.model_name = model_name
     self.debug = False  # debug mode for quickly running things
     self.do_train = True  # pre-train ELECTRA
-    self.do_eval = True  # evaluate generator/discriminator on unlabeled data
+    self.do_eval = False  # evaluate generator/discriminator on unlabeled data
 
     # loss functions
     # train ELECTRA or Electric? if both are false, trains a masked LM like BERT

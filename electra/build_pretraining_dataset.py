@@ -168,7 +168,11 @@ def write_examples(job_id, args):
     print("Job {}:".format(job_id), msg)
 
   log("Creating example writer")
-  fnames = sorted(tf.io.gfile.listdir(args.corpus_dir))
+  fnames = []
+  for input_pattern in args.corpus_dir.split(','):
+    fnames.extend(tf.gfile.Glob(input_pattern))
+
+  fnames = sorted(fnames)
   fnames = [f for (i, f) in enumerate(fnames)
             if i % args.num_processes == job_id]
   random.shuffle(fnames)

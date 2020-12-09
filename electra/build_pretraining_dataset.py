@@ -126,8 +126,8 @@ class ExampleWriter(object):
         vocab_file=vocab_file,
         do_lower_case=do_lower_case,
         spm_model_file=spm_model_file
-
     )
+
     self._example_builder = ExampleBuilder(tokenizer, max_seq_length)
     self._writers = []
     for i in range(num_out_files):

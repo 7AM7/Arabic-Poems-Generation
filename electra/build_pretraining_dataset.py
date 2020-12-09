@@ -169,10 +169,8 @@ def write_examples(job_id, args):
 
   log("Creating example writer")
   fnames = sorted(tf.io.gfile.listdir(args.corpus_dir))
-  log("Number of files : {}".format(len(fnames)))
   fnames = [f for (i, f) in enumerate(fnames)
             if i % args.num_processes == job_id]
-  log("Number of files1 : {}".format(len(fnames)))
   random.shuffle(fnames)
   example_writer = ExampleWriter(
       job_id=job_id,

@@ -29,7 +29,7 @@ class PretrainingConfig(object):
     self.model_name = model_name
     self.debug = False  # debug mode for quickly running things
     self.do_train = True  # pre-train ELECTRA
-    self.do_eval = False  # evaluate generator/discriminator on unlabeled data
+    self.do_eval = True  # evaluate generator/discriminator on unlabeled data
 
     # loss functions
     # train ELECTRA or Electric? if both are false, trains a masked LM like BERT
@@ -40,7 +40,7 @@ class PretrainingConfig(object):
     self.mask_prob = 0.15  # percent of input tokens to mask out / replace
 
     # optimization
-    self.learning_rate = 5e-4
+    self.learning_rate = 2e-4
     self.lr_decay_power = 1.0  # linear weight decay by default
     self.weight_decay_rate = 0.01
     self.num_warmup_steps = 10000
@@ -50,20 +50,20 @@ class PretrainingConfig(object):
     self.save_checkpoints_steps = 1000
     self.num_train_steps = 1000000
     self.num_eval_steps = 100
-    self.keep_checkpoint_max = 5 # maximum number of recent checkpoint files to keep;
+    self.keep_checkpoint_max = 100 # maximum number of recent checkpoint files to keep;
                                  # change to 0 or None to keep all checkpoints
 
     # model settings
-    self.model_size = "small"  # one of "small", "base", or "large"
+    self.model_size = "base"  # one of "small", "base", or "large"
     # override the default transformer hparams for the provided model size; see
     # modeling.BertConfig for the possible hparams and util.training_utils for
     # the defaults
     self.model_hparam_overrides = (
         kwargs["model_hparam_overrides"]
         if "model_hparam_overrides" in kwargs else {})
-    self.embedding_size = None  # bert hidden size by default
-    self.vocab_size = 30522  # number of tokens in the vocabulary
-    self.do_lower_case = True  # lowercase the input?
+    self.embedding_size = 768  # bert hidden size by default
+    self.vocab_size = 64000  # number of tokens in the vocabulary
+    self.do_lower_case = False  # lowercase the input?
 
     # generator settings
     self.uniform_generator = False  # generator is uniform at random
@@ -72,7 +72,7 @@ class PretrainingConfig(object):
                                               # token embeddings?
     self.untied_generator = True  # tie all generator/discriminator weights?
     self.generator_layers = 1.0  # frac of discriminator layers for generator
-    self.generator_hidden_size = 0.25  # frac of discrim hidden size for gen
+    self.generator_hidden_size = (1/3)  # frac of discrim hidden size for gen
     self.disallow_correct = False  # force the generator to sample incorrect
                                    # tokens (so 15% of tokens are always
                                    # fake)
@@ -80,16 +80,16 @@ class PretrainingConfig(object):
 
     # batch sizes
     self.max_seq_length = 128
-    self.train_batch_size = 128
+    self.train_batch_size = 256
     self.eval_batch_size = 128
 
     # TPU settings
-    self.use_tpu = False
-    self.num_tpu_cores = 1
+    self.use_tpu = True
+    self.num_tpu_cores = 16
     self.tpu_job_name = None
-    self.tpu_name = None  # cloud TPU to use for training
-    self.tpu_zone = None  # GCE zone where the Cloud TPU is located in
-    self.gcp_project = None  # project name for the Cloud TPU-enabled project
+    self.tpu_name = 'tpubert'  # cloud TPU to use for training
+    self.tpu_zone = 'europe-west4-a'  # GCE zone where the Cloud TPU is located in
+    self.gcp_project = 'poembert'  # project name for the Cloud TPU-enabled project
 
     # default locations of data files
     self.pretrain_tfrecords = os.path.join(

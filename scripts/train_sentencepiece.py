@@ -16,11 +16,11 @@ class TrainSentencePiece:
         self,
         input_file,
         save_dir,
-        control_symbols,
+        user_defined_symbols,
         model_prefix="tokenizer",
         vocab_size=64000,
         model_type="bpe",
-        max_num_sentences=1000000,
+        max_num_sentences=10000000,
     ):
         """
         Initialize TrainSentencePiece Model.
@@ -30,7 +30,7 @@ class TrainSentencePiece:
         :param vocab_size: (int) of vocab size
         :param model_type: (str) of sentencepiece model type (e.g.: BPE, unigram)
         :param max_num_sentences: (int) of maximum size of sentences the trainer loads from dataset.
-        :param control_symbols: (list of str) of sentencepiece control symbols (e.g.: [<pad>,<mask>])
+        :param user_defined_symbols: (list of str) of sentencepiece defined symbols(e.g.: [<pad>,<mask>])
         """
         self.input_file = input_file
         self.model_prefix = model_prefix
@@ -38,7 +38,7 @@ class TrainSentencePiece:
         self.vocab_size = vocab_size
         self.model_type = model_type
         self.max_num_sentences = max_num_sentences
-        self.control_symbols = control_symbols
+        self.user_defined_symbols = user_defined_symbols
 
         self.train_model()
 
@@ -68,6 +68,7 @@ class TrainSentencePiece:
                 vocab_size=self.vocab_size,
                 model_type=self.model_type,
                 shuffle_input_sentence=True,
+                unk_surface="[UNK]",
             )
 
             logging.info("SentencePiece model/vocab Trained Successfully.")
@@ -119,8 +120,8 @@ def main():
     )
 
     parser.add_argument(
-        "-c",
-        "--control_symbols",
+        "-d",
+        "--user_defined_symbols",
         help="sentencepiece model control symbols(e.g.: [<pad>,<mask>])",
         required=False,
         default="[PAD], [UNK], [CLS], [SEP], [MASK]",
@@ -132,7 +133,7 @@ def main():
     TrainSentencePiece(
         input_file=args.input_file,
         save_dir=args.save_folder,
-        control_symbols=args.control_symbols,
+        user_defined_symbols=args.user_defined_symbols,
         model_prefix=args.model_prefix,
         vocab_size=args.vocab_size,
         model_type=args.model_type,

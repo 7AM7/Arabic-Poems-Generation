@@ -122,7 +122,8 @@ def get_vocab(config: configure_pretraining.PretrainingConfig):
   """Memoized load of the vocab file."""
   if config.vocab_file not in VOCAB_MAPPING:
     vocab = tokenization.FullTokenizer(
-        config.vocab_file, do_lower_case=True).vocab
+        config.vocab_file, do_lower_case=False,
+      spm_model_file=config.spm_model_file).vocab
     VOCAB_MAPPING[config.vocab_file] = vocab
   return VOCAB_MAPPING[config.vocab_file]
 

@@ -62,7 +62,7 @@ class TrainSentencePiece:
                 input=self.input_file,
                 input_sentence_size=self.max_num_sentences,
                 model_prefix=model_file,
-                user_defined_symbols=self.control_symbols,
+                user_defined_symbols=self.user_defined_symbols,
                 # amount of characters covered by the model.
                 character_coverage=1.0,
                 vocab_size=self.vocab_size,

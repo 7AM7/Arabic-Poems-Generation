@@ -197,7 +197,7 @@ def create_training_instances(x):
     # Remove empty documents
     all_documents = [x for x in all_documents if x]
     # generate training instances
-    vocab_words = list(tokenizer.word2id.keys())
+    vocab_words = list(tokenizer.vocab.keys())
     instances = []
 
     for _ in range(FLAGS.dupe_factor):

@@ -523,6 +523,8 @@ if __name__ == "__main__":
         "output_dir", None, "Output TF records directory"
     )
 
+    flags.DEFINE_string("vocab_file", None, "The path of vocab file.")
+
     flags.DEFINE_string("spm_model_file", None, "The model file for sentence piece tokenization.")
 
     flags.DEFINE_bool(

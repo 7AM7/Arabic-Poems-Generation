@@ -76,7 +76,7 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu,
             weight_decay_rate=0.01,
             beta_1=0.9,
             beta_2=0.999,
-            epsilon=1e-6,
+            epsilon=1e-8,
             exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
     elif optimizer == "lamb":
         tf.logging.info("using lamb")

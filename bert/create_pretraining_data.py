@@ -22,7 +22,7 @@ from multiprocessing import Pool
 import tensorflow as tf
 import six
 
-from bert import tokenization
+import tokenization
 
 flags = tf.flags
 FLAGS = flags.FLAGS

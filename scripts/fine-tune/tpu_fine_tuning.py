@@ -149,7 +149,7 @@ class TPUFineTuning:
 
         return train_dataloader, test_dataloader
 
-    def run(self, index):
+    def run(self, index=None):
         def train_model(train_loader, tokenizer, model, optimizer, scheduler=None):
             tr_loss = 0.0
             tracker = xm.RateTracker()

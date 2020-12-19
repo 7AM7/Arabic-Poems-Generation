@@ -87,7 +87,7 @@ class TPUFineTuning:
             logging.info('Loading BERT tokenizer...')
             tokenizer = BertTokenizer.from_pretrained(self.tokenizer,
                                                       do_lower_case=False)
-            logging.info('Loading BERT pre-trained model...')
+            logging.info('Loading BERT pre-trained model from transformers Hub...')
             model = BertForMaskedLM.from_pretrained(
                 self.model_name,
                 output_attentions=False,  # Whether the model returns attentions weights.
@@ -95,8 +95,12 @@ class TPUFineTuning:
             )
 
         else:
+            logging.info('Loading BERT tokenizer...')
+            tokenizer = XLNetTokenizer.from_pretrained(self.tokenizer,
+                                                       do_lower_case=False)
+
+            logging.info('Loading BERT pre-trained model from checkpoint...')
             model_checkpoint = self.checkpoint()
-            tokenizer = XLNetTokenizer.from_pretrained(self.tokenizer)
             model = BertForMaskedLM.from_pretrained(
                 model_checkpoint,
                 config=self.bert_config,

@@ -40,7 +40,7 @@ def get_version(version):
     pass  # Not a dated nightly.
 
   if version not in STABLE_VERSION_MAP:
-    raise ValueError(f'Version {version} unknown')
+    raise ValueError('Version {} unknown',format(version))
   return STABLE_VERSION_MAP[version]
 
 def parse_env_tpu_ip():

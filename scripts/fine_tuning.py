@@ -33,15 +33,17 @@ import torch_xla.distributed.parallel_loader as pl
 
 class TPUFineTuning:
     def __init__(self,
+                output_dir,
                 checkpoint_path,
                 bert_config
     ):
+        self.output_dir = output_dir
         self.checkpoint_path = checkpoint_path
         self.bert_config = bert_config
 
     def checkpoint(self):
-        TF_OUTPUT_PATH = "tf_checkpoints"
-        TORCH_OUTPUT_PATH = "torch_checkpoints"
+        TF_OUTPUT_PATH = os.path.join(self.output_dir, "tf_checkpoints")
+        TORCH_OUTPUT_PATH = os.path.join(self.output_dir, "torch_checkpoints")
         if not os.path.exists(TF_OUTPUT_PATH):
             os.makedirs(TF_OUTPUT_PATH)
 
@@ -65,6 +67,13 @@ class TPUFineTuning:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
+      '--output_dir',
+      type=str,
+      required=True,
+      default=None,
+      help='fine-tuning output folder path',
+    )
+    parser.add_argument(
       '--checkpoint_path',
       type=str,
       required=True,
@@ -81,6 +90,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     tpu_fineTune = TPUFineTuning(
+        output_dir=output_dir,
         checkpoint_path=args.checkpoint_path,
         bert_config=args.bert_config
     )

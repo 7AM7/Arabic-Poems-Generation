@@ -370,7 +370,7 @@ if __name__ == '__main__':
       help='Random seed value',
     )
     args = parser.parse_args()
-
+    print("*" * 100)
     device = xm.xla_device()
     print(device)
 

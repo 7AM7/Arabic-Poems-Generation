@@ -389,9 +389,7 @@ if __name__ == '__main__':
 
     os.system('export XRT_TPU_CONFIG="tpu_worker;0;${}:8470"'.format(args.tpu_ip))
     logging.info("TPU ID ADDRESS {}".format(args.tpu_ip))
-
     device = xm.xla_device()
-    print(device)
 
     seed = args.seed
     np.random.seed(seed)

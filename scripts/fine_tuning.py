@@ -58,7 +58,7 @@ class TPUFineTuning:
         subprocess.call(['python3', '-m', 'pytorch_pretrained_bert', 'convert_tf_checkpoint_to_pytorch',
                         tf_path, self.bert_config, pt_path])
 
-        os.remove(os.path.join(TF_OUTPUT_PATH, checkpoint_name+ '.*'))
+        subprocess.call(['rm', '-rf', TF_OUTPUT_PATH])
         logging.info("Converted Successfully {}".format(pt_path))
 
 

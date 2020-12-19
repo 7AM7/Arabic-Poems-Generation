@@ -90,7 +90,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     tpu_fineTune = TPUFineTuning(
-        output_dir=output_dir,
+        output_dir=args.output_dir,
         checkpoint_path=args.checkpoint_path,
         bert_config=args.bert_config
     )

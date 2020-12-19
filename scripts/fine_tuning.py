@@ -41,6 +41,9 @@ class TPUFineTuning:
         self.checkpoint_path = checkpoint_path
         self.bert_config = bert_config
 
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
     def checkpoint(self):
         TF_OUTPUT_PATH = os.path.join(self.output_dir, "tf_checkpoints")
         TORCH_OUTPUT_PATH = os.path.join(self.output_dir, "torch_checkpoints")

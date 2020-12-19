@@ -32,7 +32,7 @@ import torch_xla.distributed.parallel_loader as pl
 
 
 class TPUFineTuning:
-    def __int__(self,
+    def __init__(self,
                 checkpoint_path,
                 bert_config
     ):

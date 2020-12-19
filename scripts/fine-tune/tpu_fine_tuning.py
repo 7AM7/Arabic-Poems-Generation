@@ -206,6 +206,8 @@ class TPUFineTuning:
             return eval_loss
 
         model, tokenizer = self.load_model_tokenizer()
+        model = model.to(self.device)
+
         train_dataloader, test_dataloader = self.prepare_train_test_datasets(tokenizer)
 
         no_decay = ['bias', 'LayerNorm.weight']
@@ -306,12 +308,21 @@ if __name__ == '__main__':
       default=None,
       help='The config json file corresponding to the pre-trained BERT model.',
     )
+
     parser.add_argument(
       '--tokenizer',
       type=str,
       required=True,
       default=None,
       help='The tokenizer model file path',
+    )
+
+    parser.add_argument(
+      '--tpu_ip',
+      type=str,
+      required=True,
+      default=None,
+      help='tpu internal IP',
     )
 
     parser.add_argument(
@@ -371,6 +382,8 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     print("*" * 100)
+    subprocess.call(['export', 'XRT_TPU_CONFIG=', args.tpu_ip])
+    logging.info("TPU ID ADDRESS {}".format(args.tpu_ip))
     device = xm.xla_device()
     print(device)
 

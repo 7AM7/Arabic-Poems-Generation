@@ -64,13 +64,13 @@ def install_vm(version, apt_packages):
   apt_cmd.extend(apt_packages)
 
   installation_cmds = [
-    ['pip', 'uninstall', '-y', 'torch', 'torchvision'],
+    ['python3', '-m', 'pip', 'uninstall', '-y', 'torch', 'torchvision'],
     ['gsutil', 'cp', torch_whl_path, '.'],
     ['gsutil', 'cp', torch_xla_whl_path, '.'],
     ['gsutil', 'cp', torchvision_whl_path, '.'],
-    ['pip', 'install', torch_whl],
-    ['pip', 'install', torch_xla_whl],
-    ['pip', 'install', torchvision_whl],
+    ['python3', '-m', 'pip', 'install', torch_whl],
+    ['python3', '-m', 'pip', 'install', torch_xla_whl],
+    ['python3', '-m', 'pip', 'install', torchvision_whl],
     apt_cmd,
   ]
   for cmd in installation_cmds:

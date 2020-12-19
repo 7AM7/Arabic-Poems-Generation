@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
+import tensorflow as tf
+
 
 class TextDataset(Dataset):
     """
@@ -9,8 +11,7 @@ class TextDataset(Dataset):
     """
 
     def __init__(self, tokenizer, file_path, device, max_length=32):
-        assert os.path.isfile(file_path)
-        with open(file_path, encoding="utf-8") as f:
+        with tf.io.gfile.GFile(file_path, "r") as f:
             text = f.read()
         lines = text.splitlines()
         self.samples = [

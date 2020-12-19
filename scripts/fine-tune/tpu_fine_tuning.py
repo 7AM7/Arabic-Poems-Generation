@@ -12,8 +12,6 @@ import random
 import gc
 import time
 import argparse
-import warnings
-warnings.filterwarnings("ignore") # to disable those warnings from TPU's and the metric calculations
 
 import torch
 import numpy as np
@@ -185,7 +183,6 @@ class TPUFineTuning:
         def val_model(val_loader, model, tokenizer):
             test_loss = 0.0
             total_test = 0
-            nb_eval_steps = 0
             acc = 0
             model.eval()
             for idx, batch in enumerate(val_loader):
@@ -200,9 +197,7 @@ class TPUFineTuning:
                 total_test += true_masks.nelement()
                 acc += accuracy(logits, true_masks, total_test)
 
-                nb_eval_steps += 1
-
-            eval_loss = test_loss / nb_eval_steps
+            eval_loss = test_loss / len(val_loader)
             perplexity = torch.exp(torch.tensor(eval_loss)).item()
             logging.info("Eval Perplexity : {}".format("{:.3f}".format(perplexity)))
             logging.info("Eval loss : {}".format("{:.3f}".format(eval_loss)))

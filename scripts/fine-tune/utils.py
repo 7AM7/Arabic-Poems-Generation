@@ -3,6 +3,8 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
+import pickle
+import os
 
 
 class TextDataset(Dataset):
@@ -73,3 +75,14 @@ def accuracy(out, labels, total):
     class_preds = out.data.cpu().numpy().argmax(axis=-1)
     labels = labels.data.cpu().numpy()
     return np.sum(class_preds == labels) / total
+
+
+def dump_dataset(dataset, path):
+    pickle.dump(
+        dataset,
+        open(path, 'wb')
+    )
+
+
+def load_dataset(path):
+    pickle.load(open(path, 'rb'))

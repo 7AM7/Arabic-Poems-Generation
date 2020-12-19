@@ -15,13 +15,13 @@ import argparse
 
 import torch
 import numpy as np
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torch.utils.data import DataLoader
 from transformers import BertForMaskedLM, BertTokenizer, XLNetTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp # To read more, http://pytorch.org/xla/index.html#running-on-multiple-xla-devices-with-multiprocessing
 import torch_xla.distributed.parallel_loader as pl
-from utils import TextDataset, mask_tokens, accuracy
+from utils import TextDataset, mask_tokens, accuracy, dump_dataset, load_dataset
 
 
 class TPUFineTuning:
@@ -112,10 +112,15 @@ class TPUFineTuning:
 
     def prepare_train_test_datasets(self, tokenizer):
         logging.info('Preparing training dataset...')
-        dataset_train = TextDataset(tokenizer=tokenizer,
-                                    file_path=self.train_dataset_path,
-                                    device=device,
-                                    max_length=self.max_sequence_len)
+        train_path = os.path.join(self.output_dir, 'train_dataset.pkl')
+        if os.path.exists(train_path):
+            dataset_train = load_dataset(train_path)
+        else:
+            dataset_train = TextDataset(tokenizer=tokenizer,
+                                        file_path=self.train_dataset_path,
+                                        device=device,
+                                        max_length=self.max_sequence_len)
+            dump_dataset(dataset_train, train_path)
 
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset_train,
@@ -132,10 +137,15 @@ class TPUFineTuning:
         )
 
         logging.info('Preparing test dataset...')
-        dataset_test = TextDataset(tokenizer=tokenizer,
-                                   file_path=self.test_dataset_path,
-                                   device=device,
-                                   max_length=self.max_sequence_len)
+        test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
+        if os.path.exists(test_path):
+            dataset_test = load_dataset(test_path)
+        else:
+            dataset_test = TextDataset(tokenizer=tokenizer,
+                                       file_path=self.test_dataset_path,
+                                       device=device,
+                                       max_length=self.max_sequence_len)
+            dump_dataset(dataset_test, dataset_test)
 
         test_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset_test,
@@ -229,9 +239,11 @@ class TPUFineTuning:
         scheduler = get_linear_schedule_with_warmup(
             optimizer, 0, len(train_dataloader) // self.batch_size)
 
+        logging.info('Training Starting ...')
         best_score = float('-inf')
         best_param_score = None
         best_epoch_score = None
+
         for epoch in range(self.epochs):
             xm.master_print("Training Epoch.... {}".format(epoch))
 

@@ -34,7 +34,8 @@ def get_version(version):
 
   try:
     datetime.strptime(version, '%Y%m%d')
-    return VersionConfig(f'nightly+{version}', f'TPU-dev{version}')
+    return VersionConfig('nightly{}'.format(version),
+                         'TPU-dev{}'.format(version))
   except ValueError:
     pass  # Not a dated nightly.
 

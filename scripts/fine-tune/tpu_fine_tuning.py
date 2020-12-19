@@ -372,6 +372,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = xm.xla_device()
+    print(device)
+
     seed = args.seed
     np.random.seed(seed)
     torch.manual_seed(seed)

@@ -19,7 +19,7 @@ import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 from transformers import BertForMaskedLM, BertTokenizer, XLNetTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
-from utils import encode_dataset, mask_tokens, accuracy, dump_dataset, load_dataset
+from utils import TextDataset, mask_tokens, accuracy, dump_dataset, load_dataset
 
 cudnn.benchmark = True
 
@@ -117,7 +117,7 @@ class GPUFineTuning:
             encoded_train_data = load_dataset(train_path)
         else:
             logging.info('Preparing training dataset...')
-            encoded_train_data = encode_dataset(tokenizer=tokenizer,
+            encoded_train_data = TextDataset(tokenizer=tokenizer,
                                         file_path=self.train_dataset_path,
                                         max_length=self.max_sequence_len)
             dump_dataset(encoded_train_data, train_path)
@@ -133,7 +133,7 @@ class GPUFineTuning:
             encoded_test_data = load_dataset(test_path)
         else:
             logging.info('Preparing test dataset...')
-            encoded_test_data = encode_dataset(tokenizer=tokenizer,
+            encoded_test_data = TextDataset(tokenizer=tokenizer,
                                         file_path=self.test_dataset_path,
                                         max_length=self.max_sequence_len)
             dump_dataset(encoded_test_data, test_path)

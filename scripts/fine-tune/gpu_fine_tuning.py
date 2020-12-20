@@ -74,7 +74,6 @@ class GPUFineTuning:
         if not os.path.exists(TORCH_OUTPUT_PATH):
             os.makedirs(TORCH_OUTPUT_PATH)
 
-
         logging.info("Downloading Tensorflow checkpoints ...")
         subprocess.call(['gsutil', 'cp', self.checkpoint_path + '.*', TF_OUTPUT_PATH])
 

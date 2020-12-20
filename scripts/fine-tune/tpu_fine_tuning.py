@@ -121,6 +121,7 @@ class TPUFineTuning:
                                         device=device,
                                         max_length=self.max_sequence_len)
             dump_dataset(dataset_train, train_path)
+            logging.info('Saved the tokenized training dataset to {}'.format(train_path))
 
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset_train,
@@ -145,7 +146,8 @@ class TPUFineTuning:
                                        file_path=self.test_dataset_path,
                                        device=device,
                                        max_length=self.max_sequence_len)
-            dump_dataset(dataset_test, dataset_test)
+            dump_dataset(dataset_test, test_path)
+            logging.info('Saved the tokenized test dataset to {}'.format(test_path))
 
         test_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset_test,

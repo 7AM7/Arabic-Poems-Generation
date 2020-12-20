@@ -61,19 +61,25 @@ class GPUFineTuning:
     def checkpoint(self):
         TF_OUTPUT_PATH = os.path.join(self.output_dir, "tf_checkpoints")
         TORCH_OUTPUT_PATH = os.path.join(self.output_dir, "torch_checkpoints")
+        checkpoint_name = self.checkpoint_path.split('/')[-1]
+        pt_path = os.path.join(TORCH_OUTPUT_PATH, 'torch_' + checkpoint_name + '.bin')
+
+        if os.path.exists(pt_path):
+            logging.info("Found existing Pytorch checkpoint {}".format(pt_path))
+            return pt_path
+
         if not os.path.exists(TF_OUTPUT_PATH):
             os.makedirs(TF_OUTPUT_PATH)
 
         if not os.path.exists(TORCH_OUTPUT_PATH):
             os.makedirs(TORCH_OUTPUT_PATH)
 
-        checkpoint_name = self.checkpoint_path.split('/')[-1]
+
         logging.info("Downloading Tensorflow checkpoints ...")
         subprocess.call(['gsutil', 'cp', self.checkpoint_path + '.*', TF_OUTPUT_PATH])
 
         logging.info("Converting Tensorflow checkpoints to Pytorch...")
         tf_path = os.path.join(TF_OUTPUT_PATH, checkpoint_name)
-        pt_path = os.path.join(TORCH_OUTPUT_PATH, 'torch_' + checkpoint_name + '.bin')
         subprocess.call(['python3', '-m', 'pytorch_pretrained_bert', 'convert_tf_checkpoint_to_pytorch',
                         tf_path, self.bert_config, pt_path])
 
@@ -119,7 +125,8 @@ class GPUFineTuning:
             logging.info('Preparing training dataset...')
             encoded_train_data = TextDataset(tokenizer=tokenizer,
                                         file_path=self.train_dataset_path,
-                                        max_length=self.max_sequence_len)
+                                        max_length=self.max_sequence_len,
+                                        device=self.device)
             dump_dataset(encoded_train_data, train_path)
             logging.info('Saved the tokenized training dataset to {}'.format(train_path))
 
@@ -135,7 +142,8 @@ class GPUFineTuning:
             logging.info('Preparing test dataset...')
             encoded_test_data = TextDataset(tokenizer=tokenizer,
                                         file_path=self.test_dataset_path,
-                                        max_length=self.max_sequence_len)
+                                        max_length=self.max_sequence_len,
+                                        device=self.device)
             dump_dataset(encoded_test_data, test_path)
             logging.info('Saved the tokenized test dataset to {}'.format(test_path))
 

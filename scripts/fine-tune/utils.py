@@ -11,7 +11,8 @@ class TextDataset(Dataset):
     Used to turn .txt file into a suitable dataset object
     """
 
-    def __init__(self, file_path, tokenizer, max_length=24):
+    def __init__(self, file_path, tokenizer, device, max_length=80 ):
+        self.device = device
         with tf.io.gfile.GFile(file_path, "r") as f:
             text = f.read()
         lines = text.splitlines()
@@ -27,7 +28,7 @@ class TextDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, item):
-        return torch.tensor(self.samples[item]).to(device)
+        return torch.tensor(self.samples[item]).to(self.device)
 
 
 def mask_tokens(inputs, tokenizer, device):

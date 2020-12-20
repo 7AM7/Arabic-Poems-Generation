@@ -111,11 +111,12 @@ class TPUFineTuning:
         return model, tokenizer
 
     def prepare_train_test_datasets(self, tokenizer):
-        logging.info('Preparing training dataset...')
         train_path = os.path.join(self.output_dir, 'train_dataset.pkl')
         if os.path.exists(train_path):
+            logging.info('Loading training dataset from {}'.format(train_path))
             dataset_train = load_dataset(train_path)
         else:
+            logging.info('Preparing training dataset...')
             dataset_train = TextDataset(tokenizer=tokenizer,
                                         file_path=self.train_dataset_path,
                                         device=device,
@@ -137,11 +138,12 @@ class TPUFineTuning:
             drop_last=True
         )
 
-        logging.info('Preparing test dataset...')
         test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
         if os.path.exists(test_path):
+            logging.info('Loading test dataset from {}'.format(train_path))
             dataset_test = load_dataset(test_path)
         else:
+            logging.info('Preparing test dataset...')
             dataset_test = TextDataset(tokenizer=tokenizer,
                                        file_path=self.test_dataset_path,
                                        device=device,

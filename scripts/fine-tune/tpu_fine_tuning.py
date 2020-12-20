@@ -399,7 +399,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print("*" * 100)
 
-    os.system('export XRT_TPU_CONFIG="tpu_worker;0;${}:8470"'.format(args.tpu_ip))
+    os.system('export XRT_TPU_CONFIG="tpu_worker;0;{}:8470"'.format(args.tpu_ip))
     device = xm.xla_device()
     logging.info("TPU ID ADDRESS {}".format(args.tpu_ip))
 

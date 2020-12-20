@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(
     format="%(asctime)s : %(levelname)s : %(message)s",
     level=logging.INFO,
-    filename="fine_tuning_tpu_1.log",
+    filename="fine_tuning_gpu_1.log",
 )
 
 import random

@@ -85,4 +85,4 @@ def dump_dataset(dataset, path):
 
 
 def load_dataset(path):
-    pickle.load(open(path, 'rb'))
+    return pickle.load(open(path, 'rb'))

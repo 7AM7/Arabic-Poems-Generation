@@ -140,7 +140,7 @@ class TPUFineTuning:
 
         test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
         if os.path.exists(test_path):
-            logging.info('Loading test dataset from {}'.format(train_path))
+            logging.info('Loading test dataset from {}'.format(test_path))
             dataset_test = load_dataset(test_path)
         else:
             logging.info('Preparing test dataset...')

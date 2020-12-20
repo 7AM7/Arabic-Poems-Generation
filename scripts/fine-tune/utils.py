@@ -1,36 +1,23 @@
 import torch
-from torch.utils.data import Dataset
-from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 import pickle
-import os
 
 
-class TextDataset(Dataset):
-    """
-    Used to turn .txt file into a suitable dataset object
-    """
+def encode_dataset(file_path, tokenizer, max_length):
+    with tf.io.gfile.GFile(file_path, "r") as f:
+        text = f.read()
+    lines = text.splitlines()
 
-    def __init__(self, tokenizer, file_path, device, max_length=32):
-        with tf.io.gfile.GFile(file_path, "r") as f:
-            text = f.read()
-        lines = text.splitlines()
-        self.samples = [
-                        tokenizer.encode(line,
-                                         max_length=max_length,
-                                         add_special_tokens=True,
-                                         pad_to_max_length=True,
-                                         )
-                        for line in tqdm(lines)
-        ]
-        self.device = device
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, item):
-        return torch.tensor(self.samples[item]).to(self.device)
+    encoded_data = tokenizer.batch_encode_plus(
+        lines,
+        add_special_tokens=True,
+        return_attention_mask=True,
+        pad_to_max_length=True,
+        max_length=max_length,
+        return_tensors='pt'
+    )
+    return encoded_data
 
 
 def mask_tokens(inputs, tokenizer, device):

@@ -15,16 +15,16 @@ import argparse
 
 import torch
 import numpy as np
-from torch.utils.data import DataLoader
+import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 from transformers import BertForMaskedLM, BertTokenizer, XLNetTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
-import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp # To read more, http://pytorch.org/xla/index.html#running-on-multiple-xla-devices-with-multiprocessing
-import torch_xla.distributed.parallel_loader as pl
-from utils import TextDataset, mask_tokens, accuracy, dump_dataset, load_dataset
+from utils import encode_dataset, mask_tokens, accuracy, dump_dataset, load_dataset
+
+cudnn.benchmark = True
 
 
-class TPUFineTuning:
+class GPUFineTuning:
     def __init__(self,
                 train_dataset_path,
                 test_dataset_path,
@@ -47,7 +47,7 @@ class TPUFineTuning:
         self.checkpoint_path = checkpoint_path
         self.bert_config = bert_config
         self.tokenizer = tokenizer
-        self.learning_rate = learning_rate * xm.xrt_world_size() # Scale learning rate to num cores
+        self.learning_rate = learning_rate
         self.epochs = epochs
         self.batch_size = batch_size
         self.max_sequence_len = max_sequence_len
@@ -114,89 +114,60 @@ class TPUFineTuning:
         train_path = os.path.join(self.output_dir, 'train_dataset.pkl')
         if os.path.exists(train_path):
             logging.info('Loading training dataset from {}'.format(train_path))
-            dataset_train = load_dataset(train_path)
+            encoded_train_data = load_dataset(train_path)
         else:
             logging.info('Preparing training dataset...')
-            dataset_train = TextDataset(tokenizer=tokenizer,
+            encoded_train_data = encode_dataset(tokenizer=tokenizer,
                                         file_path=self.train_dataset_path,
-                                        device=device,
                                         max_length=self.max_sequence_len)
-            dump_dataset(dataset_train, train_path)
+            dump_dataset(encoded_train_data, train_path)
             logging.info('Saved the tokenized training dataset to {}'.format(train_path))
 
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            dataset_train,
-            num_replicas=xm.xrt_world_size(),
-            rank=xm.get_ordinal(),
-            shuffle=True,
-        )
-
-        train_dataloader = DataLoader(
-            dataset_train,
-            sampler=train_sampler,
-            batch_size=self.batch_size,
-            drop_last=True
-        )
+        train_dataloader = DataLoader(encoded_train_data,
+                                      sampler=RandomSampler(encoded_train_data),
+                                      batch_size=self.batch_size)
 
         test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
         if os.path.exists(test_path):
             logging.info('Loading test dataset from {}'.format(test_path))
-            dataset_test = load_dataset(test_path)
+            encoded_test_data = load_dataset(test_path)
         else:
             logging.info('Preparing test dataset...')
-            dataset_test = TextDataset(tokenizer=tokenizer,
-                                       file_path=self.test_dataset_path,
-                                       device=device,
-                                       max_length=self.max_sequence_len)
-            dump_dataset(dataset_test, test_path)
+            encoded_test_data = encode_dataset(tokenizer=tokenizer,
+                                        file_path=self.test_dataset_path,
+                                        max_length=self.max_sequence_len)
+            dump_dataset(encoded_test_data, test_path)
             logging.info('Saved the tokenized test dataset to {}'.format(test_path))
 
-        test_sampler = torch.utils.data.distributed.DistributedSampler(
-            dataset_test,
-            num_replicas=xm.xrt_world_size(),
-            rank=xm.get_ordinal(),
-            shuffle=True,
-        )
-
-        test_dataloader = DataLoader(
-            dataset_test,
-            sampler=test_sampler,
-            batch_size=self.batch_size,
-            drop_last=True
-        )
+        test_dataloader = DataLoader(encoded_test_data,
+                                      sampler=RandomSampler(encoded_test_data),
+                                      batch_size=self.batch_size)
 
         return train_dataloader, test_dataloader
 
-    def run(self, index=None):
-        def train_model(train_loader, tokenizer, model, optimizer, scheduler=None):
+    def run(self):
+        def train_model(train_loader, tokenizer, model, optimizer, scheduler):
             tr_loss = 0.0
-            tracker = xm.RateTracker()
             model.train()
             for idx, batch in enumerate(train_loader):
                 inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
                 inputs = inputs.to(device)
                 true_masks = true_masks.to(device)
                 outputs = model(inputs, labels=true_masks)
-                loss = outputs.loss
 
+                loss = outputs.loss
                 loss.backward()
                 tr_loss += loss.item()
 
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
-                xm.optimizer_step(optimizer)
-                if scheduler is not None:
-                    scheduler.step()
+                optimizer.step(optimizer)
+                scheduler.step()
                 model.zero_grad()
-                if idx % 100 == 0:
-                    logging.info('[xla:{}] ({}) Loss={:.3f} Rate={:.2f} GlobalRate={:.2f} Time={}'.format(
-                        xm.get_ordinal(), idx, loss.item(), tracker.rate(),
-                        tracker.global_rate(), time.asctime()), flush=True
-                    )
                 del inputs, true_masks
 
-            loss = tr_loss / len(train_loader)
-            logging.info("global_step: {} loss: {:.3f}".format(len(train_loader), loss))
             gc.collect()
+            loss = train_loss / len(train_dataloader)
+            return loss
 
         def val_model(val_loader, model, tokenizer):
             test_loss = 0.0
@@ -207,21 +178,17 @@ class TPUFineTuning:
                 inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
                 inputs = inputs.to(device)
                 true_masks = true_masks.to(device)
-                outputs = model(inputs, labels=true_masks)
-                loss = outputs.loss
-                logits = outputs.logits
+                with torch.no_grad():
+                    outputs = model(inputs, labels=true_masks)
+                    loss = outputs.loss
+                    logits = outputs.logits
 
-                test_loss += loss.mean().item()
-                total_test += true_masks.nelement()
-                acc += accuracy(logits, true_masks, total_test)
+                    test_loss += loss.item()
+                    total_test += true_masks.nelement()
+                    acc += accuracy(logits, true_masks, total_test)
 
-            eval_loss = test_loss / len(val_loader)
-            perplexity = torch.exp(torch.tensor(eval_loss)).item()
-            logging.info("Eval Perplexity : {}".format("{:.3f}".format(perplexity)))
-            logging.info("Eval loss : {}".format("{:.3f}".format(eval_loss)))
-            logging.info("Eval Accuracy : {}".format("{:.3f}".format(100 * acc)))
-
-            return eval_loss
+            loss = test_loss / len(test_dataloader)
+            return loss, acc
 
         model, tokenizer = self.load_model_tokenizer()
         train_dataloader, test_dataloader = self.prepare_train_test_datasets(tokenizer)
@@ -239,34 +206,44 @@ class TPUFineTuning:
                           eps=self.adam_epsilon)
 
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, 0, len(train_dataloader) // self.batch_size)
+            optimizer, 0, len(train_dataloader) * self.epochs)
 
         logging.info('Training Starting ...')
         model = model.to(self.device)
         best_score = float('-inf')
         best_param_score = None
         best_epoch_score = None
-
         for epoch in range(self.epochs):
-            xm.master_print("Training Epoch.... {}".format(epoch))
-
-            train_para_loader = pl.ParallelLoader(train_dataloader, [device])
-            train_model(train_para_loader.per_device_loader(device),
+            start_time = time.time()
+            train_loss = train_model(train_dataloader,
                         tokenizer, model, optimizer,
-                        scheduler=scheduler
-                        )
+                        scheduler)
+            test_loss, acc = val_model(test_dataloader,
+                                  model, tokenizer)
+            end_time = time.time()
 
-            valid_para_loader = pl.ParallelLoader(test_dataloader, [device])
-            eval_loss = val_model(valid_para_loader.per_device_loader(device),
-                                  model, tokenizer
-                                  )
-            if best_score < eval_loss:
-                best_score = eval_loss
+            logging.info(
+                "Epoch {} Training loss: {:.3f}".format(
+                    epoch + 1, train_loss
+                )
+            )
+
+            perplexity = torch.exp(torch.tensor(test_loss)).item()
+            logging.info("Testing loss: {:.3f}".format(test_loss))
+            logging.info("Testing Perplexity : {:.3f}".format(perplexity))
+            logging.info("Testing Accuracy : {:.3f}".format(100 * acc))
+            logging.info(
+                "Epoch time: {} seconds".format(
+                    round((end_time - start_time), 3)
+                )
+            )
+            if best_score < test_loss:
+                best_score = test_loss
                 best_param_score = model.state_dict()
                 best_epoch_score = epoch
 
-        xm.master_print('Best model came from Epoch {} with score of {}'.format(best_epoch_score + 1,
-                                                                                best_score))
+        logging.info('Best model came from Epoch {} with score of {}'.format(best_epoch_score + 1,
+                                                                            best_score))
         model.load_state_dict(best_param_score)
 
         logging.info("Saving model to : {}".format(self.output_dir))
@@ -335,22 +312,6 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-      '--tpu_ip',
-      type=str,
-      required=True,
-      default=None,
-      help='tpu internal IP',
-    )
-
-    parser.add_argument(
-      '--num_tpu_cores',
-      type=int,
-      required=False,
-      default=8,
-      help='Number of tpu cores (e.g 8 cores with tpu v3.8)',
-    )
-
-    parser.add_argument(
       '--learning_rate',
       type=int,
       required=False,
@@ -400,9 +361,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print("*" * 100)
 
-    os.system('export XRT_TPU_CONFIG="tpu_worker;0;{}:8470"'.format(args.tpu_ip))
-    device = xm.xla_device()
-    logging.info("TPU ID ADDRESS {}".format(args.tpu_ip))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     seed = args.seed
     np.random.seed(seed)
@@ -410,7 +369,7 @@ if __name__ == '__main__':
     torch.cuda.manual_seed(seed)
     random.seed(seed)
 
-    tpu_fineTune = TPUFineTuning(
+    tpu_fineTune = GPUFineTuning(
         train_dataset_path=args.train_dataset_path,
         test_dataset_path=args.test_dataset_path,
         output_dir=args.output_dir,
@@ -426,5 +385,4 @@ if __name__ == '__main__':
         device=device
     )
 
-    xmp.spawn(tpu_fineTune.run(), nprocs=args.num_tpu_cores,
-              start_method='fork')
+    tpu_fineTune.run()

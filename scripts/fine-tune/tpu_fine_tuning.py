@@ -224,8 +224,6 @@ class TPUFineTuning:
             return eval_loss
 
         model, tokenizer = self.load_model_tokenizer()
-        model = model.to(self.device)
-
         train_dataloader, test_dataloader = self.prepare_train_test_datasets(tokenizer)
 
         no_decay = ['bias', 'LayerNorm.weight']
@@ -244,6 +242,7 @@ class TPUFineTuning:
             optimizer, 0, len(train_dataloader) // self.batch_size)
 
         logging.info('Training Starting ...')
+        model = model.to(self.device)
         best_score = float('-inf')
         best_param_score = None
         best_epoch_score = None

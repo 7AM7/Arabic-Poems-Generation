@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(
     format="%(asctime)s : %(levelname)s : %(message)s",
     level=logging.INFO,
-    filename="fine_tuning_gpu_1.log",
+    filename="fine_tuning_gpu_1.log"
 )
 
 import random
@@ -132,6 +132,7 @@ class GPUFineTuning:
         train_dataloader = DataLoader(encoded_train_data,
                                       sampler=RandomSampler(encoded_train_data),
                                       batch_size=self.batch_size)
+        print('finished1')
 
         test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
         if os.path.exists(test_path):
@@ -145,10 +146,12 @@ class GPUFineTuning:
                                         device=self.device)
             dump_dataset(encoded_test_data, test_path)
             logging.info('Saved the tokenized test dataset to {}'.format(test_path))
-
+        print('finished2')
         test_dataloader = DataLoader(encoded_test_data,
                                       sampler=RandomSampler(encoded_test_data),
                                       batch_size=self.batch_size)
+
+        print('finished3')
 
         return train_dataloader, test_dataloader
 
@@ -199,7 +202,7 @@ class GPUFineTuning:
 
         model, tokenizer = self.load_model_tokenizer()
         train_dataloader, test_dataloader = self.prepare_train_test_datasets(tokenizer)
-
+        print("done")
         no_decay = ['bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             {'params': [p for n, p in model.named_parameters() if

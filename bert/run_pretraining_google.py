@@ -38,6 +38,10 @@ flags.DEFINE_string(
     "Input TF example files (can be a glob or comma separated).")
 
 flags.DEFINE_string(
+    "eval_file", None, "Input TF example for validation files (can be a glob or comma separated)."
+)
+
+flags.DEFINE_string(
     "output_dir", None,
     "The output directory where the model checkpoints will be written.")
 
@@ -418,6 +422,11 @@ def main(_):
   for input_pattern in FLAGS.input_file.split(","):
     input_files.extend(tf.gfile.Glob(input_pattern))
 
+  if FLAGS.eval_file:
+    eval_files = []
+    for input_pattern in FLAGS.eval_file.split(","):
+        eval_files.extend(tf.gfile.Glob(input_pattern))
+
   tf.logging.info("*** Input Files ***")
   for input_file in input_files:
     tf.logging.info("  %s" % input_file)
@@ -469,6 +478,8 @@ def main(_):
   if FLAGS.do_eval:
     tf.logging.info("***** Running evaluation *****")
     tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
+    if FLAGS.eval_file:
+        input_files = eval_files
 
     eval_input_fn = input_fn_builder(
         input_files=input_files,

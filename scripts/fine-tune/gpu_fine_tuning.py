@@ -14,14 +14,12 @@ import time
 import argparse
 
 import torch
+from tqdm import tqdm
 import numpy as np
-import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
 from transformers import BertForMaskedLM, BertTokenizer, XLNetTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
 from utils import TextDataset, mask_tokens, accuracy, dump_dataset, load_dataset
-
-cudnn.benchmark = True
 
 
 class GPUFineTuning:
@@ -132,7 +130,6 @@ class GPUFineTuning:
         train_dataloader = DataLoader(encoded_train_data,
                                       sampler=RandomSampler(encoded_train_data),
                                       batch_size=self.batch_size)
-        print('finished1')
 
         test_path = os.path.join(self.output_dir, 'test_dataset.pkl')
         if os.path.exists(test_path):
@@ -146,63 +143,17 @@ class GPUFineTuning:
                                         device=self.device)
             dump_dataset(encoded_test_data, test_path)
             logging.info('Saved the tokenized test dataset to {}'.format(test_path))
-        print('finished2')
+
         test_dataloader = DataLoader(encoded_test_data,
                                       sampler=RandomSampler(encoded_test_data),
                                       batch_size=self.batch_size)
 
-        print('finished3')
-
         return train_dataloader, test_dataloader
 
     def run(self):
-        def train_model(train_loader, tokenizer, model, optimizer, scheduler):
-            tr_loss = 0.0
-            model.train()
-            for idx, batch in enumerate(train_loader):
-                inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
-                inputs = inputs.to(device)
-                true_masks = true_masks.to(device)
-                outputs = model(inputs, labels=true_masks)
-
-                loss = outputs.loss
-                loss.backward()
-                tr_loss += loss.item()
-
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
-                optimizer.step(optimizer)
-                scheduler.step()
-                model.zero_grad()
-                del inputs, true_masks
-
-            gc.collect()
-            loss = train_loss / len(train_dataloader)
-            return loss
-
-        def val_model(val_loader, model, tokenizer):
-            test_loss = 0.0
-            total_test = 0
-            acc = 0
-            model.eval()
-            for idx, batch in enumerate(val_loader):
-                inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
-                inputs = inputs.to(device)
-                true_masks = true_masks.to(device)
-                with torch.no_grad():
-                    outputs = model(inputs, labels=true_masks)
-                    loss = outputs.loss
-                    logits = outputs.logits
-
-                    test_loss += loss.item()
-                    total_test += true_masks.nelement()
-                    acc += accuracy(logits, true_masks, total_test)
-
-            loss = test_loss / len(test_dataloader)
-            return loss, acc
-
         model, tokenizer = self.load_model_tokenizer()
         train_dataloader, test_dataloader = self.prepare_train_test_datasets(tokenizer)
-        print("done")
+
         no_decay = ['bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             {'params': [p for n, p in model.named_parameters() if
@@ -216,7 +167,7 @@ class GPUFineTuning:
                           eps=self.adam_epsilon)
 
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, 0, len(train_dataloader) * self.epochs)
+            optimizer, 0, len(train_dataloader) // self.batch_size)
 
         logging.info('Training Starting ...')
         model = model.to(self.device)
@@ -225,35 +176,32 @@ class GPUFineTuning:
         best_epoch_score = None
         for epoch in range(self.epochs):
             start_time = time.time()
-            train_loss = train_model(train_dataloader,
-                        tokenizer, model, optimizer,
-                        scheduler)
-            test_loss, acc = val_model(test_dataloader,
-                                  model, tokenizer)
+            train_loss = self.train_model(train_dataloader,
+                                     tokenizer, model, optimizer,
+                                     scheduler)
             end_time = time.time()
+            test_loss, acc = self.val_model(test_dataloader,
+                                       model, tokenizer)
 
             logging.info(
-                "Epoch {} Training loss: {:.3f}".format(
-                    epoch + 1, train_loss
+                "Epoch {} Training loss: {:.3f} Epoch time: {} seconds".format(
+                    epoch + 1, train_loss, round((end_time - start_time), 3)
                 )
             )
 
             perplexity = torch.exp(torch.tensor(test_loss)).item()
-            logging.info("Testing loss: {:.3f}".format(test_loss))
-            logging.info("Testing Perplexity : {:.3f}".format(perplexity))
-            logging.info("Testing Accuracy : {:.3f}".format(100 * acc))
-            logging.info(
-                "Epoch time: {} seconds".format(
-                    round((end_time - start_time), 3)
-                )
-            )
-            if best_score < test_loss:
-                best_score = test_loss
+            accuracy = 100 * acc
+            print("Testing loss: {:.3f}".format(test_loss))
+            print("Testing Perplexity : {:.3f}".format(perplexity))
+            print("Testing Accuracy : {:.3f}".format(accuracy))
+
+            if best_score < accuracy:
+                best_score = accuracy
                 best_param_score = model.state_dict()
                 best_epoch_score = epoch
 
         logging.info('Best model came from Epoch {} with score of {}'.format(best_epoch_score + 1,
-                                                                            best_score))
+                                                                             best_score))
         model.load_state_dict(best_param_score)
 
         logging.info("Saving model to : {}".format(self.output_dir))
@@ -261,6 +209,52 @@ class GPUFineTuning:
                                                 'module') else model  # Take care of distributed/parallel training
         model_to_save.save_pretrained(self.output_dir)
         tokenizer.save_pretrained(self.output_dir)
+
+    def train_model(self, train_dataloader, tokenizer, model, optimizer, scheduler):
+        tr_loss = 0.0
+        model.train()
+        model.resize_token_embeddings(len(tokenizer))
+        model.zero_grad()
+        for batch in tqdm(train_dataloader, desc="Train Iteration"):
+            inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
+            inputs = inputs.to(self.device)
+            true_masks = true_masks.to(self.device)
+            outputs = model(inputs, labels=true_masks)
+            loss = outputs.loss
+
+            loss.backward()
+            tr_loss += loss.item()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
+            optimizer.step()
+            scheduler.step()
+            model.zero_grad()
+            del inputs, true_masks
+
+        gc.collect()
+        loss = tr_loss / len(train_dataloader)
+        return loss
+
+    def val_model(self, test_loader, model, tokenizer):
+        test_loss = 0.0
+        total_test = 0
+        acc = 0
+        model.eval()
+        for batch in  tqdm(test_loader, desc="Test Iteration"):
+            inputs, true_masks = mask_tokens(batch, tokenizer)
+            inputs = inputs.to(self.device)
+            true_masks = true_masks.to(self.device)
+            with torch.no_grad():
+                outputs = model(inputs, labels=true_masks)
+                loss = outputs.loss
+                logits = outputs.logits
+
+                test_loss += loss.item()
+                total_test += true_masks.nelement()
+                acc += accuracy(logits, true_masks, total_test)
+
+        loss = test_loss / len(test_loader)
+        return loss, acc
 
 
 if __name__ == '__main__':
@@ -379,7 +373,7 @@ if __name__ == '__main__':
     torch.cuda.manual_seed(seed)
     random.seed(seed)
 
-    tpu_fineTune = GPUFineTuning(
+    gpu_fineTune = GPUFineTuning(
         train_dataset_path=args.train_dataset_path,
         test_dataset_path=args.test_dataset_path,
         output_dir=args.output_dir,
@@ -395,4 +389,4 @@ if __name__ == '__main__':
         device=device
     )
 
-    tpu_fineTune.run()
+    gpu_fineTune.run()

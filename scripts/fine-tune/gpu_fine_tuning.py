@@ -241,7 +241,7 @@ class GPUFineTuning:
         acc = 0
         model.eval()
         for batch in  tqdm(test_loader, desc="Test Iteration"):
-            inputs, true_masks = mask_tokens(batch, tokenizer)
+            inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
             inputs = inputs.to(self.device)
             true_masks = true_masks.to(self.device)
             with torch.no_grad():

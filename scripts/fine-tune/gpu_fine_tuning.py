@@ -294,7 +294,7 @@ if __name__ == '__main__':
     parser.add_argument(
       '--checkpoint_path',
       type=str,
-      required=True,
+      required=False,
       default=None,
       help='Google cloud storage checkpoint path ',
     )
@@ -302,7 +302,7 @@ if __name__ == '__main__':
     parser.add_argument(
       '--bert_config',
       type=str,
-      required=True,
+      required=False,
       default=None,
       help='The config json file corresponding to the pre-trained BERT model.',
     )
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     parser.add_argument(
       '--tokenizer',
       type=str,
-      required=True,
+      required=False,
       default=None,
       help='The tokenizer model file path',
     )

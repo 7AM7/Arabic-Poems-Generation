@@ -88,7 +88,7 @@ class GPUFineTuning:
     def load_model_tokenizer(self):
         if self.model_name:
             logging.info('Loading BERT tokenizer...')
-            tokenizer = BertTokenizer.from_pretrained(self.tokenizer,
+            tokenizer = BertTokenizer.from_pretrained(self.model_name,
                                                       do_lower_case=False)
             logging.info('Loading BERT pre-trained model from transformers Hub...')
             model = BertForMaskedLM.from_pretrained(

@@ -183,6 +183,12 @@ class GPUFineTuning:
                 )
             )
 
+            print(
+                "Epoch {} Training loss: {:.3f} Epoch time: {} seconds".format(
+                    epoch + 1, train_loss, round((end_time - start_time), 3)
+                )
+            )
+
             perplexity = torch.exp(torch.tensor(test_loss)).item()
             accuracy = 100 * acc
             print("Testing loss: {:.3f}".format(test_loss))
@@ -194,10 +200,11 @@ class GPUFineTuning:
                 best_param_score = model.state_dict()
                 best_epoch_score = epoch
 
+        print('Best model came from Epoch {} with score of {}'.format(best_epoch_score + 1,
+                                                                             best_score))
         logging.info('Best model came from Epoch {} with score of {}'.format(best_epoch_score + 1,
                                                                              best_score))
         model.load_state_dict(best_param_score)
-
         logging.info("Saving model to : {}".format(self.output_dir))
         model_to_save = model.module if hasattr(model,
                                                 'module') else model  # Take care of distributed/parallel training

@@ -16,7 +16,7 @@ import argparse
 import torch
 from tqdm import tqdm
 import numpy as np
-from torch.utils.data import DataLoader, RandomSampler, TensorDataset
+from torch.utils.data import DataLoader, RandomSampler, TensorDataset, SequentialSampler
 from transformers import BertForMaskedLM, BertTokenizer, XLNetTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
 from utils import TextDataset, mask_tokens, accuracy, dump_dataset, load_dataset
@@ -145,7 +145,7 @@ class GPUFineTuning:
             logging.info('Saved the tokenized test dataset to {}'.format(test_path))
 
         test_dataloader = DataLoader(encoded_test_data,
-                                      sampler=RandomSampler(encoded_test_data),
+                                      sampler=SequentialSampler(encoded_test_data),
                                       batch_size=self.batch_size)
 
         return train_dataloader, test_dataloader

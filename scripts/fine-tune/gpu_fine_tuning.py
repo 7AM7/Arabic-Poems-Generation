@@ -366,6 +366,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print("*" * 100)
 
+    logging.basicConfig(
+        format="%(asctime)s : %(levelname)s : %(message)s",
+        level=logging.INFO,
+        filename=os.path.join(args.output_dir, "logging.log")
+    )
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     seed = args.seed
@@ -373,12 +379,6 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     random.seed(seed)
-
-    logging.basicConfig(
-        format="%(asctime)s : %(levelname)s : %(message)s",
-        level=logging.INFO,
-        filename=os.path.join(args.output_dir, "logging.log")
-    )
 
     gpu_fineTune = GPUFineTuning(
         train_dataset_path=args.train_dataset_path,

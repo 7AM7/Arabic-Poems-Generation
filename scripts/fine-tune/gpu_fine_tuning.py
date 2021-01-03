@@ -2,12 +2,6 @@ import os
 import subprocess
 import logging
 
-logging.basicConfig(
-    format="%(asctime)s : %(levelname)s : %(message)s",
-    level=logging.INFO,
-    filename="fine_tuning_gpu_1.log"
-)
-
 import random
 import gc
 import time
@@ -372,6 +366,12 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     random.seed(seed)
+
+    logging.basicConfig(
+        format="%(asctime)s : %(levelname)s : %(message)s",
+        level=logging.INFO,
+        filename=os.path.join(args.output_dir, "logging.log")
+    )
 
     gpu_fineTune = GPUFineTuning(
         train_dataset_path=args.train_dataset_path,

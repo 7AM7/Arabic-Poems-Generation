@@ -210,6 +210,8 @@ class GPUFineTuning:
                                                 'module') else model  # Take care of distributed/parallel training
         model_to_save.save_pretrained(self.output_dir)
         tokenizer.save_pretrained(self.output_dir)
+        del model
+        torch.cuda.clear_cache()
 
     def train_model(self, train_dataloader, tokenizer, model, optimizer, scheduler):
         tr_loss = 0.0
@@ -241,7 +243,7 @@ class GPUFineTuning:
         total_test = 0
         acc = 0
         model.eval()
-        for batch in  tqdm(test_loader, desc="Test Iteration"):
+        for batch in tqdm(test_loader, desc="Test Iteration"):
             inputs, true_masks = mask_tokens(batch, tokenizer, self.device)
             inputs = inputs.to(self.device)
             true_masks = true_masks.to(self.device)
@@ -253,7 +255,9 @@ class GPUFineTuning:
                 test_loss += loss.item()
                 total_test += true_masks.nelement()
                 acc += accuracy(logits, true_masks, total_test)
+            del inputs, true_masks
 
+        gc.collect()
         loss = test_loss / len(test_loader)
         return loss, acc
 

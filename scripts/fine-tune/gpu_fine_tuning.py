@@ -1,11 +1,11 @@
 import os
 import subprocess
 import logging
-
 import random
 import gc
 import time
 import argparse
+from importlib import reload
 
 import torch
 from tqdm import tqdm
@@ -370,6 +370,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print("*" * 100)
 
+    reload(logging)
     logging.basicConfig(
         format="%(asctime)s : %(levelname)s : %(message)s",
         level=logging.INFO,

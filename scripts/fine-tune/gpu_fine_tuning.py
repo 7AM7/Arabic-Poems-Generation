@@ -47,9 +47,6 @@ class GPUFineTuning:
         self.adam_epsilon = adam_epsilon
         self.model_dir = os.path.join(self.output_dir, 'saved_model')
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-
     def checkpoint(self):
         TF_OUTPUT_PATH = os.path.join(self.output_dir, "tf_checkpoints")
         TORCH_OUTPUT_PATH = os.path.join(self.output_dir, "torch_checkpoints")
@@ -369,6 +366,10 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     print("*" * 100)
+
+    # create new folder for model outputs
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     reload(logging)
     logging.basicConfig(

@@ -208,7 +208,7 @@ class GPUFineTuning:
         model_to_save.save_pretrained(self.output_dir)
         tokenizer.save_pretrained(self.output_dir)
         del model
-        torch.cuda.clear_cache()
+        torch.cuda.empty_cache()
 
     def train_model(self, train_dataloader, tokenizer, model, optimizer, scheduler):
         tr_loss = 0.0

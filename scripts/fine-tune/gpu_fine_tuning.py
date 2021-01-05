@@ -252,9 +252,7 @@ class GPUFineTuning:
                 test_loss += loss.item()
                 total_test += true_masks.nelement()
                 acc += accuracy(logits, true_masks, total_test)
-            del inputs, true_masks
 
-        gc.collect()
         loss = test_loss / len(test_loader)
         return loss, acc
 

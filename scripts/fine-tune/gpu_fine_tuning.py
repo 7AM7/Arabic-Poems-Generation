@@ -238,7 +238,7 @@ class GPUFineTuning:
     def val_model(self, test_loader, model, tokenizer):
         test_loss = 0.0
         total_test = 0
-        acc = 0
+        acc = 0.0
         model.eval()
         for batch in tqdm(test_loader, desc="Test Iteration"):
             inputs, true_masks = mask_tokens(batch, tokenizer, self.device)

@@ -681,9 +681,9 @@ def main():
     # Save a trained model
     logger.info("** ** * Saving fine - tuned model ** ** * ")
     model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-    output_model_file = os.path.join(args.output_dir, "pytorch_model.bin")
     if args.do_train:
-        torch.save(model_to_save.state_dict(), output_model_file)
+        model_to_save.save_pretrained(self.output_dir)
+        tokenizer.save_pretrained(self.output_dir)
 
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
@@ -701,12 +701,6 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
             tokens_a.pop()
         else:
             tokens_b.pop()
-
-'''
-def accuracy(out, labels):
-    outputs = np.argmax(out, axis=1)
-    return np.sum(outputs == labels)
-'''
 
 if __name__ == "__main__":
     main()

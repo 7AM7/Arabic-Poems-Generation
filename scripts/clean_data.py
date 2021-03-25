@@ -83,8 +83,8 @@ def main(args):
 	input_file = open(args.input_file, "r")
 	output_path = os.path.join(args.output_dir, args.input_file + '.cleaned')
 	output_file = open(output_path, "w")
-	lines = input_file.read().split('\n')
-	for line in tqdm(lines):
+	#lines = input_file.read().split('\n')
+	for line in input_file:
 		line = line.strip()
 		line = clean_ara(line)
 		for l in line.split('\n'):

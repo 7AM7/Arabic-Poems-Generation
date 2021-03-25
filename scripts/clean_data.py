@@ -68,10 +68,10 @@ def clean_ara(txt):
 	lines = s.split('\n')
 	lines1 = []
 	for l in lines:
-		if(len(l.split())>80):
+		if(len(l.split())>120):
 			words = s.split()
-			for i in range(int(len(words)/80)+1):
-				words.insert((i+1)*80,'\n')
+			for i in range(int(len(words)/120)+1):
+				words.insert((i+1)*120,'\n')
 			l = ' '.join(words)
 		lines1.append(l)
 	s = '\n'.join(lines1)

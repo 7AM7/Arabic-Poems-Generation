@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import os
 
 import collections
 import random
@@ -32,7 +33,7 @@ flags.DEFINE_string(
 )
 
 flags.DEFINE_string(
-    "output_file", None, "Output TF example file (or comma-separated list of files)."
+    "output_dir", None, "Output TF records directory"
 )
 
 flags.DEFINE_string(
@@ -40,6 +41,7 @@ flags.DEFINE_string(
 )
 
 flags.DEFINE_string("spm_model_file", None, "The model file for sentence piece tokenization.")
+flags.DEFINE_integer("split_num", 10, "Size of chunk")
 
 flags.DEFINE_bool(
     "do_lower_case",
@@ -508,7 +510,11 @@ def main(_):
     tf.logging.set_verbosity(tf.logging.INFO)
     logger = tf.get_logger()
     logger.propagate = False
-
+    
+    output_dir = os.path.expanduser(FLAGS.output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case,
         spm_model_file=FLAGS.spm_model_file
@@ -517,35 +523,53 @@ def main(_):
     for input_pattern in FLAGS.input_file.split(","):
         input_files.extend(tf.gfile.Glob(input_pattern))
 
-    tf.logging.info("*** Reading from input files ***")
-    for input_file in input_files:
-        tf.logging.info("  %s", input_file)
+    n = FLAGS.split_num
+    i = 0
+    check = False
+    while True:
+        if check:
+            break
+        if n >= len(input_files):
+            n = len(input_files)
+            check = True
 
-    rng = random.Random(FLAGS.random_seed)
-    instances = create_training_instances(
-        input_files,
-        tokenizer,
-        FLAGS.max_seq_length,
-        FLAGS.dupe_factor,
-        FLAGS.short_seq_prob,
-        FLAGS.masked_lm_prob,
-        FLAGS.max_predictions_per_seq,
-        rng,
-    )
+        # Split files
+        sub_input_files = input_files[i: n]
 
-    output_files = FLAGS.output_file.split(",")
-    tf.logging.info("*** Writing to output files ***")
-    for output_file in output_files:
-        tf.logging.info("  %s", output_file)
+        tf.logging.info("*** Reading from sub files from {} to {} ***".format(i, n))
+        sub_output_file = []
+        for input_file in sub_input_files:
+            tf.logging.info("  %s", input_file)
+            filename = input_file.split('/')[-1].split('.')[0] + '.tfrecord'
+            output_path = os.path.join(FLAGS.output_dir, filename)
+            sub_output_file.append(output_path)
 
-    write_instance_to_example_files(
-        instances,
-        tokenizer,
-        FLAGS.max_seq_length,
-        FLAGS.max_predictions_per_seq,
-        output_files,
-    )
+        rng = random.Random(FLAGS.random_seed)
+        instances = create_training_instances(
+            sub_input_files,
+            tokenizer,
+            FLAGS.max_seq_length,
+            FLAGS.dupe_factor,
+            FLAGS.short_seq_prob,
+            FLAGS.masked_lm_prob,
+            FLAGS.max_predictions_per_seq,
+            rng,
+        )
 
+        tf.logging.info("*** Writing to output files from {} to {} ***".format(i, n))
+        for output_file in sub_output_file:
+            tf.logging.info("  %s", output_file)
+
+        write_instance_to_example_files(
+            instances,
+            tokenizer,
+            FLAGS.max_seq_length,
+            FLAGS.max_predictions_per_seq,
+            sub_output_file,
+        )
+
+        i += FLAGS.split_num
+        n += FLAGS.split_num
 
 if __name__ == "__main__":
     flags.mark_flag_as_required("input_file")

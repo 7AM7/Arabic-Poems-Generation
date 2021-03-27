@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os
+import gc
 
 import collections
 import random
@@ -570,6 +571,7 @@ def main(_):
 
         i += FLAGS.split_num
         n += FLAGS.split_num
+        gc.collect()
 
 if __name__ == "__main__":
     flags.mark_flag_as_required("input_file")

@@ -24,6 +24,7 @@ import collections
 import random
 import tokenization
 import tensorflow as tf
+from transformers import AutoTokenizer
 
 flags = tf.flags
 
@@ -516,10 +517,14 @@ def main(_):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case,
-        spm_model_file=FLAGS.spm_model_file
-    )
+#     tokenizer = tokenization.FullTokenizer(
+#         vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case,
+#         spm_model_file=FLAGS.spm_model_file
+#     )
+    
+
+    tokenizer = AutoTokenizer.from_pretrained("UBC-NLP/ARBERT")
+    
     input_files = []
     for input_pattern in FLAGS.input_file.split(","):
         input_files.extend(tf.gfile.Glob(input_pattern))

@@ -2,6 +2,7 @@ import collections
 from transformers import GPT2TokenizerFast
 import tensorflow as tf
 import gc
+import random
 
 flags = tf.flags
 

@@ -1,9 +1,11 @@
+import os
 import collections
 from transformers import GPT2TokenizerFast
 import tensorflow as tf
 import gc
 import random
 import uuid
+
 
 flags = tf.flags
 
@@ -89,7 +91,7 @@ def main(_):
                         all_examples.append(example)
 
         filename = str(uuid.uuid4()) + '.tfrecord'
-        writer = tf.python_io.TFRecordWriter(filename)
+        writer = tf.python_io.TFRecordWriter(os.path.join(FLAGS.output_file, filename))
         for j, ex in enumerate(all_examples):
             features = collections.OrderedDict()
             features["input_ids"] = create_int_feature(ex)

@@ -90,12 +90,12 @@ def main(_):
 
         filename = str(uuid.uuid4()) + '.tfrecord'
         writer = tf.python_io.TFRecordWriter(filename)
-        for i, ex in enumerate(all_examples):
+        for j, ex in enumerate(all_examples):
             features = collections.OrderedDict()
             features["input_ids"] = create_int_feature(ex)
             tf_example = tf.train.Example(features=tf.train.Features(feature=features))
             writer.write(tf_example.SerializeToString())
-            if i < FLAGS.num_examples_print:
+            if j < FLAGS.num_examples_print:
                 tf.logging.info("*** Example ***")
                 tf.logging.info("Length: %d" % len(ex))
                 tf.logging.info("Tokens: %s" % gpt2_tok.decode(ex))

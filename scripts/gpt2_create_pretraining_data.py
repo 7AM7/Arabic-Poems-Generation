@@ -3,6 +3,7 @@ from transformers import GPT2TokenizerFast
 import tensorflow as tf
 import gc
 import random
+import uuid
 
 flags = tf.flags
 
@@ -87,8 +88,7 @@ def main(_):
                         assert len(example) == FLAGS.max_len +1
                         all_examples.append(example)
 
-        index = random.randint(0, FLAGS.split_num)
-        filename = sub_input_files[index].split('/')[-1].split('.')[0] + '.tfrecord'
+        filename = str(uuid.uuid4()) + '.tfrecord'
         writer = tf.python_io.TFRecordWriter(filename)
         for i, ex in enumerate(all_examples):
             features = collections.OrderedDict()
